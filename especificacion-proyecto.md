@@ -13,9 +13,9 @@ Nombre de la "startup": **AccessGuard AI**   Repositorio: https://github.com/dan
 
 ## 2. Caso de negocio
 
-- **Pregunta de negocio:** ¿Podemos aprobar o denegar automáticamente una solicitud de acceso a un recurso corporativo, usando el rol del empleado y el recurso pedido, sin conceder accesos indebidos y sin bloquear a quien sí debe trabajar?
-- **¿Quién usará el resultado y qué decisión tomará con él?** El equipo de Gobierno de Accesos (IAM) y Seguridad: aprobar, denegar o escalar a revisión humana cada solicitud.
-- **¿Qué cuesta equivocarse?** El peor error es el **Falso Positivo = concesión indebida** (riesgo de fuga de datos, fraude, incumplimiento). El **Falso Negativo = bloqueo legítimo** cuesta un ticket y horas perdidas. Supuesto de trabajo: un FP cuesta 50 veces un FN (USD 2.000 vs 40; **a validar** con Seguridad/Riesgos, ver `config/settings.py`).
+- **Pregunta de negocio:** ¿Podemos **auto-aprobar con seguridad** las solicitudes rutinarias de acceso a recursos corporativos —sin conceder ningún acceso indebido— y canalizar a un analista IAM solo lo ambiguo o anómalo? Marco: **Identity Governance & Administration (IGA)** bajo **Zero Trust** y **Menor Privilegio**.
+- **¿Quién usará el resultado y qué decisión tomará con él?** El equipo de Gobierno de Accesos (IAM) y Seguridad: auto-aprobar lo rutinario y seguro, y escalar a revisión humana (*human-in-the-loop*) lo ambiguo; las denegaciones son revisables y apelables.
+- **¿Qué impacto tiene equivocarse?** (matriz de impacto cualitativa en `notebooks/01_caso_de_negocio.ipynb`, sin montos en dólares). El peor error es el **Falso Positivo = acceso indebido concedido**: viola Menor Privilegio, amplía la superficie de movimiento lateral, es un hallazgo de auditoría y es difícil de detectar. El **Falso Negativo = acceso legítimo demorado** daña la productividad, pero es visible y fácil de corregir. **Se abandonó el costo en USD** (el dataset no trae costos): los valores de la fase anterior eran supuestos arbitrarios.
 
 ## 3. Datos
 
@@ -30,16 +30,20 @@ Nombre de la "startup": **AccessGuard AI**   Repositorio: https://github.com/dan
 
 ## 4. Métrica
 
-- **Métrica principal:** **costo esperado por solicitud** (matriz asimétrica FP/FN al umbral elegido en validación). Porque el 94 % se aprueba y un FP no cuesta lo mismo que un FN.
-- **Métricas secundarias:** ROC-AUC; PR-AUC de la clase *denegar*; recall de *denegar*; % de solicitudes resueltas sin humano.
-- **Línea base** (reserva por gerente, costos supuestos): aprobar todo ≈ USD 116/solicitud; denegar todo ≈ 38; regla de historial del recurso ≈ 34; **revisión manual 100 % ≈ 6** (la cifra a vencer). Ver `notebooks/01_caso_de_negocio.ipynb`.
+- **Éxito del proyecto (3 pilares):**
+  1. **Tasa de Auto-Aprobación Segura (AAR @ FPR = 0 % / confianza ≥ 98 %)**: % de solicitudes rutinarias de bajo riesgo auto-aprobadas **sin conceder accesos indebidos** (0 falsos positivos). Toda cifra de FPR = 0 % se acompaña de su cota superior al 95 % (regla de tres).
+  2. **Reducción de fricción y SLA**: latencia de decisión de los accesos legítimos (de días a milisegundos). La latencia del modelo se mide; el tiempo de espera manual actual **no está en los datos** y debe medirse con tickets reales.
+  3. **Triaje asistido (human-in-the-loop)**: lo ambiguo o anómalo va a analistas IAM; se mide la carga de revisión y el *lift* de la cola para prevenir la **fatiga de aprobación**.
+- **Métricas técnicas de apoyo:** ROC-AUC; PR-AUC de la clase *denegar*; precisión en zonas de ultra-alta confianza. La exactitud nunca se usa sola.
+- **Línea base** (OOF por gerente, solo entrenamiento): revisión manual 100 % (0 FP, 0 % auto-aprobado); regla de historial del recurso a p ≥ 0,98 (≈ 18 % auto-aprobado pero 161 accesos indebidos) y con umbral FPR = 0 % (0 % auto-aprobado). Ver `notebooks/01_caso_de_negocio.ipynb`.
+- **Código:** `src/accessguard/security_metrics.py`; constantes en `config/settings.py` (`TARGET_FPR`, `AUTO_APPROVE_CONFIDENCE`).
 
 ## 5. Riesgos
 
 - **Fuga de información posible:** partición por fila (se midió: PR-AUC(denegar) 0,42 por fila vs 0,16 por gerente); target encoding sin validación cruzada interna.
 - **Sesgos o equidad:** `ACTION` es la decisión *humana* histórica, no necesariamente la correcta; el modelo hereda sus sesgos. No usar para sancionar personas; denegaciones automáticas apelables.
 - **Datos faltantes o de mala calidad:** 0 vacíos y 0 duplicados; pero `RESOURCE = 0` (13 filas) por aclarar; deriva `train→test` en `MGR_ID` (PSI ≈ 0,28) y `ROLE_FAMILY_DESC` (≈ 0,18).
-- **Límites de lo que el modelo puede decir:** variables anónimas (no se interpreta el "significado" del rol); costos supuestos; `test.csv` sin etiqueta.
+- **Límites de lo que el modelo puede decir:** variables anónimas (no se interpreta el "significado" del rol); sin criticidad de recursos ni SLA manual en los datos; `test.csv` sin etiqueta. Ante la duda, escalar a humano (Zero Trust).
 
 ## 6. Entregables y fechas
 
@@ -59,3 +63,5 @@ Nombre de la "startup": **AccessGuard AI**   Repositorio: https://github.com/dan
 | 2026-10-30 | Partición por `MGR_ID`, estratificada, reserva cerrada del 20 % | Evitar fuga (ver notebook 03) |
 | 2026-10-30 | Eliminar `ROLE_CODE`; descartar provisionalmente `ROLE_ROLLUP_1` y `ROLE_FAMILY` | Redundancia jerárquica + ablación con CV por gerente |
 | 2026-10-30 | `MGR_ID` se conserva como variable (caso límite) y como llave de grupo | Δ ROC-AUC ≈ −0,002 ± 0,008 al quitarlo; 97 % de `test.csv` tiene gerente conocido |
+| 2026-10-31 | **Reorientación a Zero Trust / IGA**: el éxito se mide con Auto-Aprobación Segura (FPR = 0 %), reducción de fricción/SLA y triaje asistido; se abandona el costo en USD | El dataset no trae costos; Zero Trust prioriza no conceder accesos indebidos y escalar lo ambiguo a un analista |
+| 2026-10-31 | Las constantes COST_* de `config/settings.py` quedan como LEGADO (solo las importa el notebook 06, pendiente de reorientar) | Evitar romper el 06 mientras se reorienta el resto |

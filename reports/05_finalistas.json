@@ -1,26 +1,35 @@
 {
-  "criterio": "posición media en ROC-AUC y PR-AUC (denegar), 5 pliegues StratifiedGroupKFold por MGR_ID",
+  "criterio": "posición media en ROC-AUC, PR-AUC (denegar) y Tasa de Auto-Aprobación Segura (FPR=0), 5 pliegues StratifiedGroupKFold por MGR_ID; desempate por ROC-AUC",
+  "marco": "Zero Trust / IGA: éxito = auto-aprobación segura, reducción de fricción (SLA) y triaje asistido",
   "finalistas": [
-    "Random Forest",
-    "LogReg ElasticNet"
+    "LogReg ElasticNet",
+    "LogReg L2 (baseline)"
   ],
-  "mejor": "Random Forest",
+  "mejor": "LogReg ElasticNet",
   "seed": 42,
   "n_splits": 5,
   "roc_auc": {
-    "Random Forest": 0.7257004175745998,
     "LogReg ElasticNet": 0.7331208600193542,
     "LogReg L2 (baseline)": 0.7330446596012197,
+    "Random Forest": 0.7257004175745998,
     "LightGBM": 0.7233948918679829,
-    "CatBoost": 0.7189527963458004,
-    "XGBoost": 0.7204048511181
+    "XGBoost": 0.7204048511181,
+    "CatBoost": 0.7189527963458004
   },
   "pr_auc_deny": {
-    "Random Forest": 0.19549676032926785,
     "LogReg ElasticNet": 0.18494822598700147,
     "LogReg L2 (baseline)": 0.18498598562475005,
+    "Random Forest": 0.19549676032926785,
     "LightGBM": 0.18697007167589463,
-    "CatBoost": 0.18711344441332095,
-    "XGBoost": 0.18680229921303898
+    "XGBoost": 0.18680229921303898,
+    "CatBoost": 0.18711344441332095
+  },
+  "auto_approval_rate_fpr0": {
+    "LogReg ElasticNet": 0.02040816326530612,
+    "LogReg L2 (baseline)": 0.020255578867060843,
+    "Random Forest": 0.007095174518405493,
+    "LightGBM": 0.007743658210947931,
+    "XGBoost": 0.01850085828724013,
+    "CatBoost": 0.006904444020598894
   }
 }

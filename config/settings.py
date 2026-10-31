@@ -25,9 +25,23 @@ FEATURES = [
 ]
 HOLDOUT_FRACTION = 0.20
 
-# --- Supuestos de costo (USD por decisión). SON HIPÓTESIS DE TRABAJO, no datos medidos. ---
-# El dataset no trae costos: hay que validarlos con Seguridad / Riesgos / Mesa de ayuda.
-# Por eso el notebook 01 incluye un análisis de sensibilidad sobre la razón C_FP / C_FN.
-COST_FN = 30.0      # Falso Negativo: se bloquea a un usuario legítimo (ticket + tiempo de inactividad)
-COST_FP = 500.0     # Falso Positivo: se concede un acceso indebido (exposición esperada)
-COST_REVIEW = 6.0   # Revisión manual de una solicitud por un analista de seguridad/IAM (~15 min)
+# --- Marco de éxito: Ciberseguridad / IGA / Zero Trust (reorientación del proyecto) -----------------------
+# El éxito NO se mide en dólares (el dataset no trae costos), sino con métricas de seguridad operativas:
+#  1. Tasa de Auto-Aprobación Segura: % de solicitudes rutinarias auto-aprobadas SIN conceder accesos indebidos
+#     (0 falsos positivos, FPR = 0 %) y, en la variante práctica, con confianza >= AUTO_APPROVE_CONFIDENCE.
+#  2. Reducción de fricción / SLA: latencia de decisión de los accesos legítimos (se mide en ms con el modelo;
+#     el tiempo de espera manual actual NO está en los datos: hay que medirlo con los tickets del área IAM).
+#  3. Triaje asistido (human-in-the-loop): lo ambiguo o anómalo va a un analista IAM; se mide la carga de
+#     revisión y qué tan "rica" en denegaciones es esa cola (lift) para evitar la fatiga de aprobación.
+TARGET_FPR = 0.0                  # meta de falsos positivos para la auto-aprobación estricta
+AUTO_APPROVE_CONFIDENCE = 0.98    # p(aprobar) mínima para auto-aprobar en la variante práctica
+CONFIDENCE_BANDS = (0.90, 0.95, 0.98, 0.99)   # zonas de alta confianza que se reportan en el torneo
+SECURITY_PRINCIPLES = ("Menor privilegio (Least Privilege)", "Zero Trust: nunca confiar, siempre verificar",
+                       "Prevención de movimiento lateral", "Trazabilidad para auditoría y cumplimiento")
+
+# --- LEGADO (política monetaria anterior) -------------------------------------------------------------
+# Valores de trabajo de la fase anterior (USD, SUPUESTOS no medidos). Ya NO definen el éxito del proyecto;
+# se conservan solo porque `notebooks/06_optimizacion_optuna.ipynb` (pendiente de reorientar) los importa.
+COST_FN = 30.0
+COST_FP = 500.0
+COST_REVIEW = 6.0

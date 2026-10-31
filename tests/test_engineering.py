@@ -73,3 +73,18 @@ def test_triage_grid_matches_triage_cost():
     for i, lo in enumerate(lows):
         for j, hi in enumerate(highs):
             assert np.isclose(g[i, j], triage_cost(y, p, lo, hi, 500, 30, 6))
+
+
+def test_security_metrics():
+    from accessguard.security_metrics import (auto_approval_at_confidence, auto_approval_at_zero_fpr, fpr_upper_bound,
+                                              precision_at_top, review_queue_stats)
+    y = np.array([1] * 8 + [0] * 2)
+    p = np.array([0.99, 0.97, 0.96, 0.9, 0.85, 0.6, 0.5, 0.4, 0.95, 0.3])
+    z = auto_approval_at_zero_fpr(y, p)                 # mayor p entre los que había que denegar = 0.95
+    assert z["threshold"] == 0.95 and z["n_approved"] == 3 and np.isclose(z["auto_approval_rate"], 0.3)
+    c = auto_approval_at_confidence(y, p, 0.95)         # aprueba 0.99, 0.97, 0.96, 0.95 -> 1 FP
+    assert c["n_approved"] == 4 and c["fp"] == 1 and np.isclose(c["precision"], 0.75)
+    q = review_queue_stats(y, p, 0.95)
+    assert np.isclose(q["review_rate"], 0.6) and np.isclose(q["share_of_denials_in_queue"], 0.5)
+    assert precision_at_top(y, p, 0.2) == 1.0
+    assert 0.0 < fpr_upper_bound(0, 1000) < 0.004       # regla de tres ≈ 0.003

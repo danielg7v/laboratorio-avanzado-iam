@@ -1,6 +1,8 @@
 # AccessGuard AI — Gobernanza y control de accesos IAM
 
-**Problema:** decidir (aprobar / denegar / escalar) solicitudes de acceso a recursos corporativos con el dataset *Amazon Employee Access Challenge*, sin conceder accesos indebidos (FP, el error caro) ni bloquear a usuarios legítimos (FN).
+**Problema:** gobierno de accesos (IGA) bajo **Zero Trust y Menor Privilegio**: **auto-aprobar con seguridad** las solicitudes rutinarias —sin conceder accesos indebidos— y escalar a un analista IAM lo ambiguo (*human-in-the-loop*), con el dataset *Amazon Employee Access Challenge*.
+
+**Éxito del proyecto (sin costos en USD):** (1) Tasa de Auto-Aprobación Segura @ FPR = 0 % / confianza ≥ 98 %; (2) reducción de fricción y SLA (de días a milisegundos; el SLA manual real debe medirse); (3) triaje asistido para prevenir la fatiga de aprobación.
 
 ## Estado (hito H1 · clase 2, 30-oct-2026)
 | Entregable | Ubicación |
@@ -22,6 +24,7 @@ python -m pytest -q
 ```
 
 ## Advertencias
-- Los **costos en USD** (`config/settings.py`) son **supuestos**; el dataset no los trae.
+- El proyecto se **reorientó** (2026-10-31) de un enfoque de costo monetario a un marco de seguridad. Las constantes `COST_*` de `config/settings.py` son **legado**: solo las usa `notebooks/06_optimizacion_optuna.ipynb`, **pendiente de reorientar** (sus resultados en `reports/06_*` son del enfoque anterior).
+- Resultado actual (notebook 05): la auto-aprobación segura (FPR = 0 %) es de ≈ 1 – 2 % de las solicitudes; la mayoría debe ir a revisión humana.
 - Solo 32.769 filas con etiqueta y todas las variables categóricas: puede no cumplir `curso/evaluacion/criterios-dataset.md`; consultar al instructor.
 - `Data/test.csv` no tiene `ACTION`; no sirve para medir desempeño.

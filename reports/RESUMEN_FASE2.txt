@@ -1,3 +1,18 @@
+REORIENTACION ZERO TRUST / IGA (2026-10-31) - LEER PRIMERO
+==========================================================
+El proyecto dejo de medirse en dolares. Nuevo marco de exito (config/settings.py, src/accessguard/security_metrics.py):
+  1) Tasa de Auto-Aprobacion Segura (AAR @ FPR=0 / confianza>=0.98), con cota superior del FPR al 95%.
+  2) Reduccion de friccion y SLA: latencia medida del modelo (~10-50 ms por solicitud); el SLA manual real NO esta en los datos.
+  3) Triaje asistido (human-in-the-loop): carga de revision y lift de la cola.
+Notebooks 01-05 reescritos/re-ejecutados con ese marco. Resultado honesto (notebook 05, OOF por gerente):
+  - AAR @ FPR=0 ~ 0.7-2.0% de las solicitudes (la mayoria debe ir a un analista); a p>=0.98 se auto-aprueba mas (hasta ~22%)
+    pero se cuelan accesos indebidos (13-98 segun el modelo): confianza 98% no equivale a FPR=0.
+  - Lift de la cola de revision ~1.0: el modelo por si solo no prioriza la cola.
+  - Finalistas actuales: LogReg ElasticNet y LogReg L2 (ranking medio de ROC-AUC, PR-AUC y AAR@FPR=0).
+PENDIENTE: el notebook 06 (Optuna) NO se modifico ni se ejecuto; sigue con la politica monetaria anterior y
+models/model.joblib / reports/06_* corresponden a ese enfoque (Random Forest, 3 estados con costos). Hay que reorientarlo.
+Todo lo de abajo describe fases anteriores (enfoque de costos) y queda como historia.
+
 ACTUALIZACION (politica de 3 estados y costos recalibrados) - LEER PRIMERO
 ==========================================================================
 Cambios: COST_FP=500, COST_FN=30, COST_REVIEW=6 (config/settings.py); arboles con regularizacion estricta

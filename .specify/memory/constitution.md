@@ -46,7 +46,7 @@ inventado en el informe invalida todo lo demás.
 
 ## Restricciones del proyecto
 
-- **Caso:** ¿Se puede aprobar o denegar automáticamente una solicitud de acceso a un recurso corporativo sin conceder accesos indebidos ni bloquear a usuarios legítimos? · **Métrica principal:** costo esperado por solicitud con matriz asimétrica (FP = concesión indebida, FN = bloqueo legítimo), porque ~94 % de las solicitudes se aprueban y la exactitud no discrimina · **Tipo de problema:** clasificación binaria desbalanceada.
+- **Caso:** ¿Se puede aprobar o denegar automáticamente una solicitud de acceso a un recurso corporativo sin conceder accesos indebidos ni bloquear a usuarios legítimos? · **Métrica principal:** Tasa de Auto-Aprobación Segura (FPR = 0 % / confianza ≥ 98 %; FP = acceso indebido concedido), con reducción de fricción/SLA y triaje asistido; ~94 % de las solicitudes se aprueban y la exactitud no discrimina · **Tipo de problema:** clasificación binaria desbalanceada.
 - **Entorno:** Python 3.12; dependencias fijadas en `requirements.txt`.
 - **Seguimiento de experimentos:** MLflow en Databricks (o local si no hay conexión); la app **no** consulta Databricks.
 - **App:** Streamlit, cargando `models/model.joblib` desde el repositorio.
