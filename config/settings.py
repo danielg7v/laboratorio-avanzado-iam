@@ -41,7 +41,7 @@ SECURITY_PRINCIPLES = ("Menor privilegio (Least Privilege)", "Zero Trust: nunca 
 
 # --- LEGADO (política monetaria anterior) -------------------------------------------------------------
 # Valores de trabajo de la fase anterior (USD, SUPUESTOS no medidos). Ya NO definen el éxito del proyecto;
-# se conservan solo porque `notebooks/06_optimizacion_optuna.ipynb` (pendiente de reorientar) los importa.
+# se conservan solo como referencia histórica (el notebook 06 reorientado ya no los importa).
 COST_FN = 30.0
 COST_FP = 500.0
 COST_REVIEW = 6.0

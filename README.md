@@ -24,7 +24,7 @@ python -m pytest -q
 ```
 
 ## Advertencias
-- El proyecto se **reorientó** (2026-10-31) de un enfoque de costo monetario a un marco de seguridad. Las constantes `COST_*` de `config/settings.py` son **legado**: solo las usa `notebooks/06_optimizacion_optuna.ipynb`, **pendiente de reorientar** (sus resultados en `reports/06_*` son del enfoque anterior).
+- El proyecto se **reorientó** (2026-10-31) de un enfoque de costo monetario a un marco de seguridad. Las constantes `COST_*` de `config/settings.py` son **legado** (ya nada las usa). El notebook 06 ya está **reorientado pero NO ejecutado**: hasta que se ejecute, `models/model.joblib` sigue siendo el modelo del enfoque monetario; sus resultados antiguos están en `reports/legacy_costos/`.
 - Resultado actual (notebook 05): la auto-aprobación segura (FPR = 0 %) es de ≈ 1 – 2 % de las solicitudes; la mayoría debe ir a revisión humana.
 - Solo 32.769 filas con etiqueta y todas las variables categóricas: puede no cumplir `curso/evaluacion/criterios-dataset.md`; consultar al instructor.
 - `Data/test.csv` no tiene `ACTION`; no sirve para medir desempeño.

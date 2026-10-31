@@ -88,3 +88,23 @@ def test_security_metrics():
     assert np.isclose(q["review_rate"], 0.6) and np.isclose(q["share_of_denials_in_queue"], 0.5)
     assert precision_at_top(y, p, 0.2) == 1.0
     assert 0.0 < fpr_upper_bound(0, 1000) < 0.004       # regla de tres ≈ 0.003
+
+
+def test_fp_budget_queue_and_predict_zero_trust():
+    import pandas as pd
+    from accessguard.security_metrics import auto_approval_at_fp_budget, auto_approval_at_zero_fpr, predict_zero_trust, queue_capture
+    y = np.array([1] * 8 + [0] * 3)
+    p = np.array([0.99, 0.97, 0.96, 0.9, 0.85, 0.6, 0.5, 0.4, 0.95, 0.3, 0.2])
+    b0 = auto_approval_at_fp_budget(y, p, 0)
+    assert b0["threshold"] == auto_approval_at_zero_fpr(y, p)["threshold"] == 0.95 and b0["fp"] == 0
+    b1 = auto_approval_at_fp_budget(y, p, 1)           # tolera 1 FP: umbral = 2º indebido más alto (0.3)
+    assert b1["threshold"] == 0.3 and b1["fp"] == 1 and b1["auto_approval_rate"] > b0["auto_approval_rate"]
+    qc = queue_capture(y, p, 0.95, fractions=(0.5, 1.0))   # cola = 8 solicitudes; las denegaciones de p baja quedan primero
+    assert qc["n_queue"] == 8 and qc["100%"] == 1.0 and abs(qc["50%"] - 2 / 3) < 1e-9
+
+    class Dummy:                                        # pipeline mínimo con predict_proba
+        def predict_proba(self, X):
+            q = X["p"].to_numpy(); return np.c_[1 - q, q]
+    X = pd.DataFrame({"p": p})
+    out = predict_zero_trust({"pipeline": Dummy(), "t_auto_strict": 0.95}, X)
+    assert (out["decision"] == "aprobar_auto").sum() == 3 and out["prioridad_revision"].dropna().min() == 1

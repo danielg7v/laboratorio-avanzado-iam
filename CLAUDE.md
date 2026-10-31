@@ -11,7 +11,7 @@ Soy estudiante de la Maestría en Ingeniería Analítica (analista, no desarroll
 - **Entidad que se repite: `MGR_ID`** → toda partición y validación cruzada es **por gerente** (`StratifiedGroupKFold`), nunca por fila.
 - Las 9 variables son **códigos categóricos anónimos** guardados como enteros: no son cantidades, no se escalan como números.
 - `Data/test.csv` **no tiene etiqueta**: no sirve para medir. La reserva cerrada sale de `train.csv` (`Data/processed/holdout_clean.csv`).
-- **El éxito NO se mide en dólares** (el dataset no trae costos): se mide con Auto-Aprobación Segura (FPR = 0 % / confianza ≥ 98 %), reducción de fricción/SLA y triaje asistido (`src/accessguard/security_metrics.py`). Las constantes `COST_*` de `config/settings.py` son legado (solo las usa el notebook 06, pendiente de reorientar).
+- **El éxito NO se mide en dólares** (el dataset no trae costos): se mide con Auto-Aprobación Segura (FPR = 0 % / confianza ≥ 98 %), reducción de fricción/SLA y triaje asistido (`src/accessguard/security_metrics.py`). Las constantes `COST_*` de `config/settings.py` son legado (ya nada las usa). El notebook 06 está reorientado pero aún sin ejecutar; los resultados monetarios antiguos están en `reports/legacy_costos/`.
 - Léeme antes de generar código: `especificacion-proyecto.md`, `especificaciones/` (una por etapa) y la constitución.
 
 ## Pila tecnológica

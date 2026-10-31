@@ -79,3 +79,44 @@ def decision_latency_ms(pipeline, X, repeats: int = 100) -> dict:
     pipeline.predict_proba(batch)
     per_req = (time.perf_counter() - t0) * 1000 / len(batch)
     return {"single_median_ms": float(np.median(times)), "single_p95_ms": float(np.percentile(times, 95)), "batch_ms_per_request": float(per_req)}
+
+
+def auto_approval_at_fp_budget(y_true, p_approve, max_fp: int = 0) -> dict:
+    """Auto-aprobación tolerando como máximo `max_fp` accesos indebidos (presupuesto de FP). max_fp=0 es el caso estricto."""
+    y, p = np.asarray(y_true), np.asarray(p_approve)
+    neg = np.sort(p[y == 0])[::-1]                     # puntuaciones de los indebidos, de mayor a menor
+    t = float(neg[max_fp]) if len(neg) > max_fp else -np.inf   # se aprueba lo que supera al (max_fp+1)-ésimo indebido
+    approved = p > t
+    fp = int((approved & (y == 0)).sum())
+    return {"max_fp": max_fp, "threshold": t, "auto_approval_rate": float(approved.mean()), "n_approved": int(approved.sum()),
+            "fp": fp, "fpr": fp / max(len(neg), 1), "fpr_upper95": fpr_upper_bound(fp, len(neg))}
+
+
+def queue_capture(y_true, p_approve, threshold: float, fractions=(0.05, 0.10, 0.20, 0.50)) -> dict:
+    """Valor de ordenar la cola del analista: la cola es todo lo que NO supera `threshold`, ordenada de más sospechoso
+    (p más baja) a menos. Devuelve qué fracción de las denegaciones se encuentra revisando solo el primer X % de la cola."""
+    y, p = np.asarray(y_true), np.asarray(p_approve)
+    q = np.flatnonzero(~(p > threshold))
+    q = q[np.argsort(p[q], kind="stable")]             # más sospechoso primero
+    n_deny_total = max(int((y == 0).sum()), 1)
+    out = {}
+    for f in fractions:
+        k = max(int(round(f * len(q))), 1) if len(q) else 0
+        out[f"{int(f * 100)}%"] = float((y[q[:k]] == 0).sum() / n_deny_total) if k else 0.0
+    out["n_queue"] = int(len(q))
+    return out
+
+
+def predict_zero_trust(bundle: dict, X) -> "pd.DataFrame":
+    """Aplica un paquete exportado: auto-aprobar si p > t_auto (umbral estricto); en otro caso, revisión humana (nunca auto-deniega).
+
+    Devuelve p_approve, la decisión y la prioridad en la cola (1 = revisar primero, la más sospechosa).
+    """
+    import pandas as pd
+    p = bundle["pipeline"].predict_proba(X)[:, 1]
+    auto = p > bundle["t_auto_strict"]
+    out = pd.DataFrame({"p_approve": p, "decision": np.where(auto, "aprobar_auto", "revisar")}, index=X.index)
+    rev = ~auto
+    out["prioridad_revision"] = np.nan
+    out.loc[rev, "prioridad_revision"] = pd.Series(p[rev], index=X.index[rev]).rank(method="first").to_numpy()
+    return out

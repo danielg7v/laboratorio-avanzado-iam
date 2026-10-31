@@ -9,8 +9,10 @@ Notebooks 01-05 reescritos/re-ejecutados con ese marco. Resultado honesto (noteb
     pero se cuelan accesos indebidos (13-98 segun el modelo): confianza 98% no equivale a FPR=0.
   - Lift de la cola de revision ~1.0: el modelo por si solo no prioriza la cola.
   - Finalistas actuales: LogReg ElasticNet y LogReg L2 (ranking medio de ROC-AUC, PR-AUC y AAR@FPR=0).
-PENDIENTE: el notebook 06 (Optuna) NO se modifico ni se ejecuto; sigue con la politica monetaria anterior y
-models/model.joblib / reports/06_* corresponden a ese enfoque (Random Forest, 3 estados con costos). Hay que reorientarlo.
+NOTEBOOK 06 (actualizacion): reorientado al marco Zero Trust pero NO EJECUTADO todavia. Optuna maximiza la Auto-Aprobacion Segura (FPR=0),
+politica auto-aprobar / revisar (no auto-deniega), cola ordenada por sospecha, frontera de FP tolerados, evaluacion en la reserva
+(segunda mirada, con interruptor OPEN_HOLDOUT). Al ejecutarlo REEMPLAZARA models/model.joblib y best_model_iam.joblib (hoy: Random Forest
+del enfoque monetario). Resultados del enfoque monetario: reports/legacy_costos/.
 Todo lo de abajo describe fases anteriores (enfoque de costos) y queda como historia.
 
 ACTUALIZACION (politica de 3 estados y costos recalibrados) - LEER PRIMERO
