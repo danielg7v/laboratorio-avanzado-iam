@@ -1,0 +1,34 @@
+# Credenciales: NUNCA se suben
+.env
+kaggle.json
+
+# Entornos y cachés
+.venv/
+venv/
+venv-iam/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Datos procesados: se regeneran con notebooks/03_preprocesamiento.ipynb
+Data/processed/*
+!Data/processed/.gitkeep
+# Datos crudos adicionales (los CSV del curso en Data/ sí se versionan; revisa la licencia de Kaggle si el repo es público)
+Data/raw/*
+!Data/raw/.gitkeep
+!Data/raw/README.md
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# MLflow local de respaldo y salidas de verificación
+mlflow_local.db
+mlruns/
+.verify-*
+
+# Modelo intermedio (pesado): solo se sube models/model.joblib
+models/final_pipeline.joblib
