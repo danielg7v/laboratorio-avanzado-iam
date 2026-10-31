@@ -1,0 +1,17 @@
+{
+  "model": "LogReg ElasticNet",
+  "best_params": {
+    "C": 0.0457958859837167,
+    "l1_ratio": 0.11277278436524751
+  },
+  "n_trials": 40,
+  "cv_roc_auc_search": 0.7335145000362798,
+  "threshold_min_cost": 0.9450000000000001,
+  "threshold_max_f1_deny": 0.705140126241285,
+  "cost_per_request_oof": 34.816707991607856,
+  "cost_assumptions": {
+    "COST_FP": 2000.0,
+    "COST_FN": 40.0,
+    "nota": "supuestos de trabajo, no costos medidos"
+  }
+}

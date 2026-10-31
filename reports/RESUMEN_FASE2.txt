@@ -1,0 +1,83 @@
+RESUMEN FASE 2 - AccessGuard AI (notebooks 04, 05 y 06)
+========================================================
+
+LO QUE SE HIZO
+--------------
+Notebook 04 - Feature engineering (notebooks/04_feature_engineering.ipynb)
+  - Variables nuevas: frecuencias (freq__*), interacciones (RESOURCE x MGR_ID, ROLE_TITLE x ROLE_DEPTNAME, ...),
+    agregaciones por grupo (nuniq__*, share__*) y target encoding fuera de pliegue (te__*).
+  - Todo vive en src/accessguard/engineering.py (IAMFeatureBuilder), con pruebas en tests/test_engineering.py.
+  - Salidas: Data/processed/train_features.parquet, test_features.parquet y holdout_features.parquet
+    (la reserva se guarda pero NO se usa).
+  - Hallazgo: el target encoding solo (ROC-AUC ~0.705) iguala o supera a las 29 variables juntas (~0.691);
+    la diferencia esta dentro del ruido entre pliegues.
+
+Notebook 05 - Torneo de modelos (notebooks/05_torneo_modelos.ipynb)
+  - 6 modelos, 5 pliegues StratifiedGroupKFold agrupados por MGR_ID (no StratifiedKFold simple, para no mezclar
+    un mismo gerente entre entrenamiento y validacion).
+  - Ganan los modelos lineales (ROC-AUC ~0.733). Random Forest es el mejor en PR-AUC de "denegar" (~0.196).
+    XGBoost, LightGBM y CatBoost sobreajustan con parametros por defecto.
+  - Finalistas (desempate por ROC-AUC): LogReg ElasticNet y LogReg L2, practicamente identicos.
+  - Resultados en reports/05_*.csv/json.
+
+Notebook 06 - Optuna y umbral (notebooks/06_optimizacion_optuna.ipynb)
+  - 40 ensayos sobre LogReg ElasticNet. La mejora frente a los parametros por defecto es +0.0006 de ROC-AUC
+    (no se distingue del ruido).
+  - Umbral de menor costo: 0.945 (aprobar si p >= umbral).
+  - Modelo exportado: models/best_model_iam.joblib (paquete con pipeline + umbral + metadatos).
+    Requiere src/ en el PYTHONPATH para cargarse.
+  - Resultados en reports/06_*.csv/json.
+
+Reglas respetadas: la reserva (holdout) y test.csv NO se usaron para decidir nada; las metricas son de
+validacion cruzada por gerente, no de la reserva.
+
+
+PROBLEMA PRINCIPAL: LOS COSTOS
+------------------------------
+Los costos de config/settings.py son SUPUESTOS, no datos medidos:
+  COST_FP = 2000 USD  (se aprueba un acceso indebido)
+  COST_FN = 40 USD    (se bloquea a un usuario legitimo)
+  COST_REVIEW = 6 USD (revision manual; hoy NO se usa en el modelo)
+
+Con esos valores (razon FP/FN = 50):
+  Aprobar todo            115.8 USD por solicitud
+  Denegar todo             37.7 USD por solicitud
+  Modelo, umbral 0.945     34.8 USD por solicitud
+El ahorro frente a "denegar todo" es ~2.83 USD por solicitud (IC 95%: 1.16 a 4.28), ~7%.
+Con ese umbral el modelo deniega/manda a revision casi todo: recall de denegar ~0.95, pero ~19,000 de las
+~24,700 solicitudes legitimas quedan bloqueadas.
+
+El valor del modelo depende mucho de la razon FP/FN (reports/06_sensibilidad_costos.csv):
+  - FP=100  (razon 2.5):  ahorro ~0.17 USD  -> casi nulo
+  - FP=1000 (razon 25):   ahorro ~8.08 USD  -> el mayor
+  - FP=2000 (razon 50):   ahorro ~2.87 USD
+  - FP=10000 (razon 250): ahorro ~0.78 USD  -> casi nulo
+
+
+QUE REVISAR Y AJUSTAR A MANO (COSTOS)
+-------------------------------------
+1. Validar COST_FP con Seguridad/Riesgos: costo esperado de una concesion indebida (incidente, auditoria,
+   exposicion de datos). Hoy es una hipotesis.
+2. Validar COST_FN con Mesa de ayuda: ticket, horas perdidas, escalamiento por un bloqueo injustificado.
+3. Definir COST_REVIEW con el equipo que revisa: minutos por caso x costo/hora. Hoy el modelo es de dos
+   salidas (aprobar/denegar); con un umbral tan alto, la salida real es "revisar", y su costo y capacidad
+   no estan modelados.
+4. Preguntar cual es la capacidad real de revision manual (casos por dia). Con el umbral 0.945, la carga
+   seria enorme; quiza haga falta una politica de tres salidas (aprobar / revisar / denegar).
+5. Cambiar los valores en config/settings.py y volver a ejecutar el notebook 06 (y el 05 si se quiere ver
+   las tablas con los costos nuevos):
+     python -m nbconvert --to notebook --execute --inplace notebooks/06_optimizacion_optuna.ipynb
+   El umbral y models/best_model_iam.joblib se recalculan solos con los costos nuevos.
+6. Mirar la tabla de sensibilidad: si con los costos reales el ahorro frente a "denegar todo" no es
+   distinguible de cero, el modelo no justifica su despliegue como politica automatica.
+
+
+OTROS PENDIENTES
+----------------
+- Etapa de validacion: abrir la reserva (holdout_clean.csv) UNA sola vez con el modelo y umbral finales.
+- Interpretacion de variables (SHAP).
+- La app espera models/model.joblib (segun CLAUDE.md); el modelo actual se llama best_model_iam.joblib.
+- Probar regularizacion fuerte en los modelos de arboles (hoy sobreajustan); no se asumio que cierren la brecha.
+- Los gerentes de test.csv son 78% conocidos, pero la validacion por gerente los trata como nuevos: la
+  estimacion de rendimiento es prudente, y el rendimiento real en test.csv podria ser distinto (no se puede
+  medir sin etiqueta).

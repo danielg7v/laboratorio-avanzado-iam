@@ -32,3 +32,6 @@ mlruns/
 
 # Modelo intermedio (pesado): solo se sube models/model.joblib
 models/final_pipeline.joblib
+
+# CatBoost
+catboost_info/

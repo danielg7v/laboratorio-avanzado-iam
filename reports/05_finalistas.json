@@ -1,0 +1,26 @@
+{
+  "criterio": "posición media en ROC-AUC y PR-AUC (denegar), 5 pliegues StratifiedGroupKFold por MGR_ID",
+  "finalistas": [
+    "LogReg ElasticNet",
+    "LogReg L2 (baseline)"
+  ],
+  "mejor": "LogReg ElasticNet",
+  "seed": 42,
+  "n_splits": 5,
+  "roc_auc": {
+    "LogReg ElasticNet": 0.7331208600193542,
+    "LogReg L2 (baseline)": 0.7330446596012197,
+    "Random Forest": 0.7257004175745998,
+    "CatBoost": 0.7110512949485988,
+    "XGBoost": 0.7077459413825249,
+    "LightGBM": 0.7013335280229264
+  },
+  "pr_auc_deny": {
+    "LogReg ElasticNet": 0.18494822598700147,
+    "LogReg L2 (baseline)": 0.18498598562475005,
+    "Random Forest": 0.19549676032926785,
+    "CatBoost": 0.17556984750509436,
+    "XGBoost": 0.17354238579216918,
+    "LightGBM": 0.16942034567089403
+  }
+}

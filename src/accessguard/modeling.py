@@ -1,0 +1,166 @@
+"""Utilidades de modelado: candidatos del torneo, validación por gerente, métricas y umbral de decisión.
+
+Convención: clase positiva = 1 = aprobar. FP = acceso concedido indebidamente (caro); FN = usuario legítimo bloqueado.
+"""
+import numpy as np
+import pandas as pd
+from sklearn.metrics import (
+    average_precision_score, confusion_matrix, f1_score, precision_recall_curve, recall_score, roc_auc_score,
+)
+from sklearn.model_selection import StratifiedGroupKFold
+
+from accessguard.engineering import IAMFeatureBuilder
+
+
+def make_cv(n_splits: int = 5, seed: int = 42) -> StratifiedGroupKFold:
+    """Validación cruzada estratificada por ACTION y agrupada por gerente (ningún gerente en dos pliegues)."""
+    return StratifiedGroupKFold(n_splits=n_splits, shuffle=True, random_state=seed)
+
+
+def fold_matrices(X: pd.DataFrame, y: np.ndarray, groups, cv, seed: int = 42):
+    """Calcula UNA vez las variables de cada pliegue (ajustadas solo con su entrenamiento).
+
+    Es equivalente a meter el constructor dentro de un Pipeline por pliegue, pero evita repetirlo
+    en cada ensayo de Optuna. Devuelve una lista de (X_tr, y_tr, X_va, y_va, idx_va).
+    """
+    folds = []
+    for tr, va in cv.split(X, y, groups=groups):
+        fb = IAMFeatureBuilder(seed=seed)
+        X_tr = fb.fit_transform(X.iloc[tr], y[tr])
+        X_va = fb.transform(X.iloc[va])
+        folds.append((X_tr, y[tr], X_va, y[va], va))
+    return folds
+
+
+def expected_cost(y_true, p_approve, threshold: float, c_fp: float, c_fn: float) -> float:
+    """Costo medio por solicitud. Se aprueba si p >= umbral."""
+    pred = (np.asarray(p_approve) >= threshold).astype(int)
+    y_true = np.asarray(y_true)
+    fp = ((pred == 1) & (y_true == 0)).sum()
+    fn = ((pred == 0) & (y_true == 1)).sum()
+    return float((c_fp * fp + c_fn * fn) / len(y_true))
+
+
+def best_threshold(y_true, p_approve, c_fp: float, c_fn: float, grid=None):
+    """Umbral que minimiza el costo esperado. Devuelve (umbral, costo, tabla completa)."""
+    grid = np.linspace(0.01, 0.99, 197) if grid is None else grid
+    costs = np.array([expected_cost(y_true, p_approve, t, c_fp, c_fn) for t in grid])
+    i = int(np.argmin(costs))
+    return float(grid[i]), float(costs[i]), pd.DataFrame({"threshold": grid, "cost": costs})
+
+
+def metrics_at(y_true, p_approve, threshold: float = 0.5) -> dict:
+    """ROC-AUC, PR-AUC (ambas clases), F1 y recall por clase y matriz de confusión.
+
+    La clase *denegar* (0) es la minoritaria (5,8 %): su PR-AUC es la métrica exigente.
+    """
+    y_true = np.asarray(y_true)
+    p = np.asarray(p_approve)
+    pred = (p >= threshold).astype(int)
+    tn, fp, fn, tp = confusion_matrix(y_true, pred, labels=[0, 1]).ravel()
+    return {
+        "roc_auc": roc_auc_score(y_true, p),
+        "pr_auc_deny": average_precision_score(1 - y_true, 1 - p),
+        "pr_auc_approve": average_precision_score(y_true, p),
+        "f1_deny": f1_score(y_true, pred, pos_label=0, zero_division=0),
+        "f1_approve": f1_score(y_true, pred, pos_label=1, zero_division=0),
+        "recall_deny": recall_score(y_true, pred, pos_label=0, zero_division=0),
+        "recall_approve": recall_score(y_true, pred, pos_label=1, zero_division=0),
+        "tn": int(tn), "fp": int(fp), "fn": int(fn), "tp": int(tp),
+    }
+
+
+def f1_curve(y_true, p_approve):
+    """Curva precisión-recall de la clase *denegar* y el F1 en cada umbral (sobre p de aprobar)."""
+    prec, rec, thr = precision_recall_curve(1 - np.asarray(y_true), 1 - np.asarray(p_approve))
+    f1 = 2 * prec * rec / np.clip(prec + rec, 1e-12, None)
+    return prec, rec, f1, thr
+
+
+# --- Modelos candidatos y espacios de búsqueda ---------------------------------------------------
+from catboost import CatBoostClassifier  # noqa: E402
+from lightgbm import LGBMClassifier  # noqa: E402
+from sklearn.ensemble import RandomForestClassifier  # noqa: E402
+from sklearn.linear_model import LogisticRegression  # noqa: E402
+from sklearn.pipeline import Pipeline  # noqa: E402
+from sklearn.preprocessing import StandardScaler  # noqa: E402
+from xgboost import XGBClassifier  # noqa: E402
+
+MODEL_NAMES = ["LogReg L2 (baseline)", "LogReg ElasticNet", "Random Forest", "XGBoost", "LightGBM", "CatBoost"]
+
+
+def build_model(name: str, params: dict | None = None, seed: int = 42):
+    """Devuelve un estimador que recibe la matriz numérica de `IAMFeatureBuilder`."""
+    p = dict(params or {})
+    if name == "LogReg L2 (baseline)":
+        return Pipeline([("scale", StandardScaler()), ("clf", LogisticRegression(
+            C=p.get("C", 1.0), max_iter=2000, random_state=seed))])
+    if name == "LogReg ElasticNet":
+        return Pipeline([("scale", StandardScaler()), ("clf", LogisticRegression(
+            solver="saga", l1_ratio=p.get("l1_ratio", 0.5), C=p.get("C", 1.0),
+            max_iter=3000, random_state=seed))])
+    if name == "Random Forest":
+        return RandomForestClassifier(
+            n_estimators=p.get("n_estimators", 300), max_depth=p.get("max_depth"),
+            min_samples_leaf=p.get("min_samples_leaf", 5), max_features=p.get("max_features", "sqrt"),
+            n_jobs=-1, random_state=seed)
+    if name == "XGBoost":
+        return XGBClassifier(
+            n_estimators=p.get("n_estimators", 300), learning_rate=p.get("learning_rate", 0.05),
+            max_depth=p.get("max_depth", 4), subsample=p.get("subsample", 0.8),
+            colsample_bytree=p.get("colsample_bytree", 0.8), min_child_weight=p.get("min_child_weight", 1),
+            reg_lambda=p.get("reg_lambda", 1.0), tree_method="hist", n_jobs=-1, random_state=seed, verbosity=0)
+    if name == "LightGBM":
+        return LGBMClassifier(
+            n_estimators=p.get("n_estimators", 300), learning_rate=p.get("learning_rate", 0.05),
+            num_leaves=p.get("num_leaves", 31), min_child_samples=p.get("min_child_samples", 20),
+            subsample=p.get("subsample", 0.8), subsample_freq=1, colsample_bytree=p.get("colsample_bytree", 0.8),
+            reg_lambda=p.get("reg_lambda", 0.0), n_jobs=-1, random_state=seed, verbose=-1)
+    if name == "CatBoost":
+        return CatBoostClassifier(
+            iterations=p.get("iterations", 400), learning_rate=p.get("learning_rate", 0.05),
+            depth=p.get("depth", 6), l2_leaf_reg=p.get("l2_leaf_reg", 3.0),
+            random_strength=p.get("random_strength", 1.0), random_seed=seed, verbose=0, thread_count=-1, allow_writing_files=False)
+    raise ValueError(f"modelo desconocido: {name}")
+
+
+def suggest_params(trial, name: str) -> dict:
+    """Espacio de búsqueda de Optuna: rangos acotados por conocimiento de cada algoritmo."""
+    if name in ("LogReg L2 (baseline)", "LogReg ElasticNet"):
+        p = {"C": trial.suggest_float("C", 1e-3, 10, log=True)}
+        if name == "LogReg ElasticNet":
+            p["l1_ratio"] = trial.suggest_float("l1_ratio", 0.05, 0.95)
+        return p
+    if name == "Random Forest":
+        return {"n_estimators": trial.suggest_int("n_estimators", 200, 600, step=100),
+                "max_depth": trial.suggest_int("max_depth", 6, 30),
+                "min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 30),
+                "max_features": trial.suggest_float("max_features", 0.2, 0.9)}
+    if name == "XGBoost":
+        return {"n_estimators": trial.suggest_int("n_estimators", 100, 600, step=50),
+                "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.2, log=True),
+                "max_depth": trial.suggest_int("max_depth", 2, 8),
+                "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+                "colsample_bytree": trial.suggest_float("colsample_bytree", 0.4, 1.0),
+                "min_child_weight": trial.suggest_int("min_child_weight", 1, 20),
+                "reg_lambda": trial.suggest_float("reg_lambda", 1e-2, 20, log=True)}
+    if name == "LightGBM":
+        return {"n_estimators": trial.suggest_int("n_estimators", 100, 600, step=50),
+                "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.2, log=True),
+                "num_leaves": trial.suggest_int("num_leaves", 8, 64),
+                "min_child_samples": trial.suggest_int("min_child_samples", 5, 80),
+                "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+                "colsample_bytree": trial.suggest_float("colsample_bytree", 0.4, 1.0),
+                "reg_lambda": trial.suggest_float("reg_lambda", 1e-3, 20, log=True)}
+    if name == "CatBoost":
+        return {"iterations": trial.suggest_int("iterations", 200, 700, step=100),
+                "learning_rate": trial.suggest_float("learning_rate", 0.02, 0.2, log=True),
+                "depth": trial.suggest_int("depth", 3, 8),
+                "l2_leaf_reg": trial.suggest_float("l2_leaf_reg", 1.0, 20.0, log=True),
+                "random_strength": trial.suggest_float("random_strength", 0.1, 5.0, log=True)}
+    raise ValueError(name)
+
+
+def build_pipeline(name: str, params: dict | None = None, seed: int = 42) -> Pipeline:
+    """Pipeline completo (variables + modelo) para entrenar con el conjunto final y exportar."""
+    return Pipeline([("features", IAMFeatureBuilder(seed=seed)), ("model", build_model(name, params, seed))])
