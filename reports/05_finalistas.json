@@ -1,26 +1,26 @@
 {
   "criterio": "posición media en ROC-AUC y PR-AUC (denegar), 5 pliegues StratifiedGroupKFold por MGR_ID",
   "finalistas": [
-    "LogReg ElasticNet",
-    "LogReg L2 (baseline)"
+    "Random Forest",
+    "LogReg ElasticNet"
   ],
-  "mejor": "LogReg ElasticNet",
+  "mejor": "Random Forest",
   "seed": 42,
   "n_splits": 5,
   "roc_auc": {
+    "Random Forest": 0.7257004175745998,
     "LogReg ElasticNet": 0.7331208600193542,
     "LogReg L2 (baseline)": 0.7330446596012197,
-    "Random Forest": 0.7257004175745998,
-    "CatBoost": 0.7110512949485988,
-    "XGBoost": 0.7077459413825249,
-    "LightGBM": 0.7013335280229264
+    "LightGBM": 0.7233948918679829,
+    "CatBoost": 0.7189527963458004,
+    "XGBoost": 0.7204048511181
   },
   "pr_auc_deny": {
+    "Random Forest": 0.19549676032926785,
     "LogReg ElasticNet": 0.18494822598700147,
     "LogReg L2 (baseline)": 0.18498598562475005,
-    "Random Forest": 0.19549676032926785,
-    "CatBoost": 0.17556984750509436,
-    "XGBoost": 0.17354238579216918,
-    "LightGBM": 0.16942034567089403
+    "LightGBM": 0.18697007167589463,
+    "CatBoost": 0.18711344441332095,
+    "XGBoost": 0.18680229921303898
   }
 }

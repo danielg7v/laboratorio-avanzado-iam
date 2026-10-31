@@ -28,6 +28,6 @@ HOLDOUT_FRACTION = 0.20
 # --- Supuestos de costo (USD por decisión). SON HIPÓTESIS DE TRABAJO, no datos medidos. ---
 # El dataset no trae costos: hay que validarlos con Seguridad / Riesgos / Mesa de ayuda.
 # Por eso el notebook 01 incluye un análisis de sensibilidad sobre la razón C_FP / C_FN.
-COST_FN = 40.0      # Falso Negativo: se bloquea a un usuario legítimo (ticket + horas perdidas)
-COST_FP = 2000.0    # Falso Positivo: se concede un acceso indebido (exposición esperada)
-COST_REVIEW = 6.0   # Revisión manual de una solicitud por un analista (~15 min)
+COST_FN = 30.0      # Falso Negativo: se bloquea a un usuario legítimo (ticket + tiempo de inactividad)
+COST_FP = 500.0     # Falso Positivo: se concede un acceso indebido (exposición esperada)
+COST_REVIEW = 6.0   # Revisión manual de una solicitud por un analista de seguridad/IAM (~15 min)

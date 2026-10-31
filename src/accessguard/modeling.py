@@ -104,23 +104,28 @@ def build_model(name: str, params: dict | None = None, seed: int = 42):
             n_estimators=p.get("n_estimators", 300), max_depth=p.get("max_depth"),
             min_samples_leaf=p.get("min_samples_leaf", 5), max_features=p.get("max_features", "sqrt"),
             n_jobs=-1, random_state=seed)
+    # Árboles con regularización estricta (valores por defecto del torneo): poca profundidad, tasa de
+    # aprendizaje baja, submuestreo 0.7 y penalización L2 / mínimo de peso por hoja.
     if name == "XGBoost":
         return XGBClassifier(
-            n_estimators=p.get("n_estimators", 300), learning_rate=p.get("learning_rate", 0.05),
-            max_depth=p.get("max_depth", 4), subsample=p.get("subsample", 0.8),
-            colsample_bytree=p.get("colsample_bytree", 0.8), min_child_weight=p.get("min_child_weight", 1),
-            reg_lambda=p.get("reg_lambda", 1.0), tree_method="hist", n_jobs=-1, random_state=seed, verbosity=0)
+            n_estimators=p.get("n_estimators", 400), learning_rate=p.get("learning_rate", 0.03),
+            max_depth=p.get("max_depth", 4), subsample=p.get("subsample", 0.7),
+            colsample_bytree=p.get("colsample_bytree", 0.7), min_child_weight=p.get("min_child_weight", 10),
+            reg_lambda=p.get("reg_lambda", 10.0), tree_method="hist", n_jobs=-1, random_state=seed, verbosity=0)
     if name == "LightGBM":
         return LGBMClassifier(
-            n_estimators=p.get("n_estimators", 300), learning_rate=p.get("learning_rate", 0.05),
-            num_leaves=p.get("num_leaves", 31), min_child_samples=p.get("min_child_samples", 20),
-            subsample=p.get("subsample", 0.8), subsample_freq=1, colsample_bytree=p.get("colsample_bytree", 0.8),
-            reg_lambda=p.get("reg_lambda", 0.0), n_jobs=-1, random_state=seed, verbose=-1)
+            n_estimators=p.get("n_estimators", 400), learning_rate=p.get("learning_rate", 0.03),
+            max_depth=p.get("max_depth", 4), num_leaves=p.get("num_leaves", 15),
+            min_child_weight=p.get("min_child_weight", 5.0), min_child_samples=p.get("min_child_samples", 50),
+            subsample=p.get("subsample", 0.7), subsample_freq=1, colsample_bytree=p.get("colsample_bytree", 0.7),
+            reg_lambda=p.get("reg_lambda", 10.0), n_jobs=-1, random_state=seed, verbose=-1)
     if name == "CatBoost":
         return CatBoostClassifier(
-            iterations=p.get("iterations", 400), learning_rate=p.get("learning_rate", 0.05),
-            depth=p.get("depth", 6), l2_leaf_reg=p.get("l2_leaf_reg", 3.0),
-            random_strength=p.get("random_strength", 1.0), random_seed=seed, verbose=0, thread_count=-1, allow_writing_files=False)
+            iterations=p.get("iterations", 500), learning_rate=p.get("learning_rate", 0.03),
+            depth=p.get("depth", 4), l2_leaf_reg=p.get("l2_leaf_reg", 10.0),
+            bootstrap_type="Bernoulli", subsample=p.get("subsample", 0.7), min_data_in_leaf=p.get("min_data_in_leaf", 20),
+            random_strength=p.get("random_strength", 1.0), random_seed=seed, verbose=0, thread_count=-1,
+            allow_writing_files=False)
     raise ValueError(f"modelo desconocido: {name}")
 
 
@@ -136,31 +141,99 @@ def suggest_params(trial, name: str) -> dict:
                 "max_depth": trial.suggest_int("max_depth", 6, 30),
                 "min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 30),
                 "max_features": trial.suggest_float("max_features", 0.2, 0.9)}
+    # Árboles regularizados: profundidad 3-5, tasa de aprendizaje 0.01-0.05, submuestreo fijo en 0.7
     if name == "XGBoost":
-        return {"n_estimators": trial.suggest_int("n_estimators", 100, 600, step=50),
-                "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.2, log=True),
-                "max_depth": trial.suggest_int("max_depth", 2, 8),
-                "subsample": trial.suggest_float("subsample", 0.5, 1.0),
-                "colsample_bytree": trial.suggest_float("colsample_bytree", 0.4, 1.0),
-                "min_child_weight": trial.suggest_int("min_child_weight", 1, 20),
-                "reg_lambda": trial.suggest_float("reg_lambda", 1e-2, 20, log=True)}
+        return {"n_estimators": trial.suggest_int("n_estimators", 200, 800, step=100),
+                "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.05, log=True),
+                "max_depth": trial.suggest_int("max_depth", 3, 5),
+                "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 1.0),
+                "min_child_weight": trial.suggest_int("min_child_weight", 5, 40),
+                "reg_lambda": trial.suggest_float("reg_lambda", 1.0, 50, log=True)}
     if name == "LightGBM":
-        return {"n_estimators": trial.suggest_int("n_estimators", 100, 600, step=50),
-                "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.2, log=True),
-                "num_leaves": trial.suggest_int("num_leaves", 8, 64),
-                "min_child_samples": trial.suggest_int("min_child_samples", 5, 80),
-                "subsample": trial.suggest_float("subsample", 0.5, 1.0),
-                "colsample_bytree": trial.suggest_float("colsample_bytree", 0.4, 1.0),
-                "reg_lambda": trial.suggest_float("reg_lambda", 1e-3, 20, log=True)}
+        return {"n_estimators": trial.suggest_int("n_estimators", 200, 800, step=100),
+                "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.05, log=True),
+                "max_depth": trial.suggest_int("max_depth", 3, 5),
+                "num_leaves": trial.suggest_int("num_leaves", 6, 24),
+                "min_child_samples": trial.suggest_int("min_child_samples", 20, 150),
+                "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 1.0),
+                "reg_lambda": trial.suggest_float("reg_lambda", 1.0, 50, log=True)}
     if name == "CatBoost":
-        return {"iterations": trial.suggest_int("iterations", 200, 700, step=100),
-                "learning_rate": trial.suggest_float("learning_rate", 0.02, 0.2, log=True),
-                "depth": trial.suggest_int("depth", 3, 8),
-                "l2_leaf_reg": trial.suggest_float("l2_leaf_reg", 1.0, 20.0, log=True),
-                "random_strength": trial.suggest_float("random_strength", 0.1, 5.0, log=True)}
+        return {"iterations": trial.suggest_int("iterations", 200, 800, step=100),
+                "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.05, log=True),
+                "depth": trial.suggest_int("depth", 3, 5),
+                "l2_leaf_reg": trial.suggest_float("l2_leaf_reg", 3.0, 50.0, log=True),
+                "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 10, 100)}
     raise ValueError(name)
 
 
 def build_pipeline(name: str, params: dict | None = None, seed: int = 42) -> Pipeline:
     """Pipeline completo (variables + modelo) para entrenar con el conjunto final y exportar."""
     return Pipeline([("features", IAMFeatureBuilder(seed=seed)), ("model", build_model(name, params, seed))])
+
+
+# --- Política de triaje de 3 estados ---------------------------------------------------------------
+def triage_decision(p_approve, t_low: float, t_high: float) -> np.ndarray:
+    """2 = aprobar (p >= t_high), 1 = revisar (t_low <= p < t_high), 0 = denegar (p < t_low)."""
+    p = np.asarray(p_approve)
+    return np.where(p >= t_high, 2, np.where(p >= t_low, 1, 0))
+
+
+def triage_cost(y_true, p_approve, t_low: float, t_high: float, c_fp: float, c_fn: float, c_review: float) -> float:
+    """Costo operativo medio por solicitud.
+
+    Aprobar: c_fp si era un acceso a denegar (FP), 0 si era legítimo. Revisar: c_review por caso (el analista
+    resuelve bien). Denegar: c_fn si era un usuario legítimo (FN), 0 si era correcto.
+    """
+    y_true = np.asarray(y_true)
+    d = triage_decision(p_approve, t_low, t_high)
+    fp = ((d == 2) & (y_true == 0)).sum()
+    fn = ((d == 0) & (y_true == 1)).sum()
+    rev = (d == 1).sum()
+    return float((c_fp * fp + c_fn * fn + c_review * rev) / len(y_true))
+
+
+def triage_summary(y_true, p_approve, t_low: float, t_high: float, c_fp: float, c_fn: float, c_review: float) -> dict:
+    """Costo y conteos de la política de 3 estados."""
+    y_true = np.asarray(y_true)
+    d = triage_decision(p_approve, t_low, t_high)
+    return {
+        "cost": triage_cost(y_true, p_approve, t_low, t_high, c_fp, c_fn, c_review),
+        "pct_approve": float((d == 2).mean()), "pct_review": float((d == 1).mean()), "pct_deny": float((d == 0).mean()),
+        "fp_auto_approve": int(((d == 2) & (y_true == 0)).sum()), "fn_auto_deny": int(((d == 0) & (y_true == 1)).sum()),
+        "n_review": int((d == 1).sum()), "n": int(len(y_true)),
+    }
+
+
+def baseline_costs(y_true, c_fp: float, c_fn: float, c_review: float) -> dict:
+    """Costo por solicitud de las políticas triviales (sin modelo)."""
+    y_true = np.asarray(y_true)
+    return {"aprobar todo": float(c_fp * (y_true == 0).mean()), "denegar todo": float(c_fn * (y_true == 1).mean()),
+            "revisar todo": float(c_review)}
+
+
+def triage_grid(y_true, p_approve, c_fp: float, c_fn: float, c_review: float, lows, highs) -> np.ndarray:
+    """Costo por solicitud para todas las parejas (t_low, t_high) a la vez. Devuelve matriz [len(lows), len(highs)].
+
+    Usa conteos acumulados sobre las probabilidades ordenadas, así que es rápido aunque la rejilla sea grande.
+    Las parejas con t_low >= t_high quedan en NaN.
+    """
+    y_true = np.asarray(y_true)
+    p = np.asarray(p_approve)
+    p0 = np.sort(p[y_true == 0])   # probabilidades de los que había que denegar
+    p1 = np.sort(p[y_true == 1])   # probabilidades de los legítimos
+    n = len(y_true)
+    lows, highs = np.asarray(lows), np.asarray(highs)
+    fp = len(p0) - np.searchsorted(p0, highs, side="left")        # denegables con p >= t_high (se aprueban)
+    fn = np.searchsorted(p1, lows, side="left")                    # legítimos con p < t_low (se deniegan)
+    n_ge = lambda t: n - np.searchsorted(np.sort(p), t, side="left")
+    review = n_ge(lows)[:, None] - n_ge(highs)[None, :]
+    cost = (c_fp * fp[None, :] + c_fn * fn[:, None] + c_review * review) / n
+    cost = np.where(lows[:, None] < highs[None, :], cost, np.nan)
+    return cost
+
+
+def predict_triage(bundle: dict, X: pd.DataFrame) -> pd.DataFrame:
+    """Aplica un paquete exportado (pipeline + umbrales) y devuelve p_approve y la decisión de 3 estados."""
+    p = bundle["pipeline"].predict_proba(X)[:, 1]
+    labels = np.array(["denegar", "revisar", "aprobar"])
+    return pd.DataFrame({"p_approve": p, "decision": labels[triage_decision(p, bundle["t_low"], bundle["t_high"])]}, index=X.index)

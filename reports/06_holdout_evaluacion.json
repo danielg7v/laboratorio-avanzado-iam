@@ -1,0 +1,64 @@
+{
+  "evaluated_at": "2026-10-31T11:34:10",
+  "model": "Random Forest",
+  "t_low": 0.14828371851062297,
+  "t_high": 0.9826401464620804,
+  "n_holdout": 6554,
+  "n_managers": 883,
+  "pct_deny_holdout": 0.057827281049740664,
+  "roc_auc": 0.7126911860532191,
+  "pr_auc_deny": 0.1888201468802974,
+  "triage": {
+    "cost": 6.027464144034178,
+    "pct_approve": 0.033567287152883735,
+    "pct_review": 0.9664327128471163,
+    "pct_deny": 0.0,
+    "fp_auto_approve": 3,
+    "fn_auto_deny": 0,
+    "n_review": 6334,
+    "n": 6554
+  },
+  "best_trivial": "revisar todo",
+  "savings_ci95_usd_per_request": [
+    -0.2896530247652138,
+    0.1832073346330768
+  ],
+  "cost_assumptions": {
+    "COST_FP": 500.0,
+    "COST_FN": 30.0,
+    "COST_REVIEW": 6.0,
+    "nota": "supuestos de trabajo, no costos medidos"
+  },
+  "comparison": [
+    {
+      "politica": "aprobar todo",
+      "costo_por_solicitud": 28.913640524870306,
+      "ahorro_vs_mejor_trivial_usd": -22.913640524870306,
+      "ahorro_vs_mejor_trivial_pct": -381.8940087478384
+    },
+    {
+      "politica": "denegar todo",
+      "costo_por_solicitud": 28.26518156850778,
+      "ahorro_vs_mejor_trivial_usd": -22.26518156850778,
+      "ahorro_vs_mejor_trivial_pct": -371.0863594751297
+    },
+    {
+      "politica": "revisar todo",
+      "costo_por_solicitud": 6.0,
+      "ahorro_vs_mejor_trivial_usd": 0.0,
+      "ahorro_vs_mejor_trivial_pct": 0.0
+    },
+    {
+      "politica": "modelo, 2 estados (umbral 0.895)",
+      "costo_por_solicitud": 19.697894415624045,
+      "ahorro_vs_mejor_trivial_usd": -13.697894415624045,
+      "ahorro_vs_mejor_trivial_pct": -228.29824026040077
+    },
+    {
+      "politica": "modelo, 3 estados (0.148/0.983)",
+      "costo_por_solicitud": 6.027464144034178,
+      "ahorro_vs_mejor_trivial_usd": -0.02746414403417763,
+      "ahorro_vs_mejor_trivial_pct": -0.45773573390296046
+    }
+  ]
+}

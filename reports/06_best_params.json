@@ -1,17 +1,19 @@
 {
-  "model": "LogReg ElasticNet",
+  "model": "Random Forest",
   "best_params": {
-    "C": 0.0457958859837167,
-    "l1_ratio": 0.11277278436524751
+    "n_estimators": 200,
+    "max_depth": 29,
+    "min_samples_leaf": 20,
+    "max_features": 0.6923479746025818
   },
-  "n_trials": 40,
-  "cv_roc_auc_search": 0.7335145000362798,
-  "threshold_min_cost": 0.9450000000000001,
-  "threshold_max_f1_deny": 0.705140126241285,
-  "cost_per_request_oof": 34.816707991607856,
+  "t_low": 0.14828371851062297,
+  "t_high": 0.9826401464620804,
+  "n_trials": 50,
+  "cv_cost_per_request": 6.0083921419034905,
   "cost_assumptions": {
-    "COST_FP": 2000.0,
-    "COST_FN": 40.0,
+    "COST_FP": 500.0,
+    "COST_FN": 30.0,
+    "COST_REVIEW": 6.0,
     "nota": "supuestos de trabajo, no costos medidos"
   }
 }

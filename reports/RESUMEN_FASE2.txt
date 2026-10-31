@@ -1,3 +1,23 @@
+ACTUALIZACION (politica de 3 estados y costos recalibrados) - LEER PRIMERO
+==========================================================================
+Cambios: COST_FP=500, COST_FN=30, COST_REVIEW=6 (config/settings.py); arboles con regularizacion estricta
+(notebook 05); Optuna conjunto de hiperparametros + umbrales T_low/T_high con politica Aprobar/Revisar/Denegar
+(notebook 06); modelo en models/model.joblib (copia en best_model_iam.joblib); reserva evaluada UNA vez.
+
+Resultado en la reserva (6,554 solicitudes, 883 gerentes nuevos; reports/06_holdout_reporte.md):
+  aprobar todo 28.91 | denegar todo 28.27 | REVISAR TODO 6.00 | modelo 2 estados 19.70 | modelo 3 estados 6.03 USD/solicitud
+  - El modelo de 3 estados NO mejora a "revisar todo" (ahorro -0.03 USD, IC95 [-0.29, 0.18]): empate.
+  - Optuna dejo 96.6% a revision, 3.4% aprobado automatico, 0% denegado automatico.
+  - Causa: con COST_REVIEW=6 y COST_FP=500, aprobar solo conviene si p(aprobar) >= ~0.988, y el modelo
+    (ROC-AUC ~0.71) casi nunca llega a ese nivel de confianza. Denegar automatico nunca conviene.
+  - En validacion cruzada el RF sin optimizar con umbrales por rejilla dio 5.92 (ahorro 0.08, optimista).
+  - Sensibilidad (reports/06_sensibilidad_costos.csv): el modelo solo ahorra de forma apreciable si
+    COST_REVIEW es alto frente a COST_FP (p. ej. FP=500 y revision=12 -> ahorro ~1.1 USD) o si FP es bajo.
+  => Revisar a mano: COST_REVIEW real y capacidad de revision; COST_FP real. Si el costo de revisar es
+     cercano al de las politicas triviales, el modelo no justifica automatizar.
+La app de Streamlit sigue siendo la plantilla del curso (modulo creditsight): hay que adaptarla al paquete.
+Las secciones de abajo corresponden a la primera version (costos 2000/40) y quedan como historia.
+
 RESUMEN FASE 2 - AccessGuard AI (notebooks 04, 05 y 06)
 ========================================================
 
