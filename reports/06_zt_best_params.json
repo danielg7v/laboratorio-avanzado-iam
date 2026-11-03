@@ -1,0 +1,22 @@
+{
+  "model": "LogReg ElasticNet",
+  "best_params": {
+    "C": 0.031692812003053746,
+    "l1_ratio": 0.3393069530481164
+  },
+  "n_trials": 50,
+  "objective": "auto_approval_rate @ FPR=0 (OOF, pooled)",
+  "t_auto_strict": 0.9809057434648595,
+  "oof": {
+    "roc_auc": 0.7291183371714187,
+    "pr_auc_deny": 0.18244568402814268,
+    "auto_approval_rate_fpr0": 0.03406446690825863,
+    "fpr_upper95": 0.0019715271531543775,
+    "scheme": "StratifiedGroupKFold 5 por MGR_ID, semilla 42"
+  },
+  "latency_ms": {
+    "single_median_ms": 10.558400000036272,
+    "single_p95_ms": 11.729470000136644,
+    "batch_ms_per_request": 0.02115830000002461
+  }
+}

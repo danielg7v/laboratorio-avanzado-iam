@@ -1,0 +1,57 @@
+{
+  "evaluated_at": "2026-11-03T18:08:29",
+  "model": "LogReg ElasticNet",
+  "t_auto_strict": 0.9809057434648595,
+  "second_look_note": "la reserva ya se había abierto una vez con el enfoque monetario anterior",
+  "n_holdout": 6554,
+  "n_managers": 883,
+  "n_indebidas": 379,
+  "pct_indebidas": 0.057827281049740616,
+  "roc_auc": 0.7008785104632904,
+  "pr_auc_deny": 0.198654735707646,
+  "estricto": {
+    "umbral": 0.9809057434648595,
+    "auto_approval_rate": 0.05202929508696979,
+    "n_auto": 341,
+    "fp": 2,
+    "fpr": 0.005277044854881266,
+    "fpr_upper95": 0.016517700423587158,
+    "review_rate": 0.9479707049130303
+  },
+  "practico_098": {
+    "confidence": 0.98,
+    "auto_approval_rate": 0.05721696673787,
+    "n_approved": 375.0,
+    "fp": 3.0,
+    "precision": 0.992,
+    "fpr": 0.0079155672823219,
+    "fpr_upper95": 0.020330214106313502
+  },
+  "umbral_estricto_con_datos_de_la_reserva": {
+    "umbral": 0.9893744630056903,
+    "auto_approval_rate": 0.017241379310344827
+  },
+  "cola": {
+    "lift": 1.0493182436859985,
+    "deny_rate_in_queue": 0.060679220988250446,
+    "n_queue": 6213,
+    "captura": {
+      "5%": 0.20844327176781002,
+      "10%": 0.30606860158311344,
+      "20%": 0.41688654353562005,
+      "50%": 0.7282321899736148
+    }
+  },
+  "baselines": {
+    "revisar todo": {
+      "auto_approval_rate": 0.0,
+      "fp": 0,
+      "review_rate": 1.0
+    },
+    "aprobar todo": {
+      "auto_approval_rate": 1.0,
+      "fp": 379,
+      "review_rate": 0.0
+    }
+  }
+}
