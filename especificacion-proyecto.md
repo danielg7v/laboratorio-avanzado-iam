@@ -7,6 +7,7 @@
 | Integrante | Rol (datos / modelado / app / negocio) |
 |---|---|
 | danielg7v | datos / modelado (completar el resto del grupo) |
+| Carlos Mario Trujillo Murillo (trujillo8009) | negocio / presentación |
 | | |
 
 Nombre de la "startup": **AccessGuard AI**   Repositorio: https://github.com/danielg7v/laboratorio-avanzado-iam
