@@ -1,0 +1,146 @@
+{
+    "project": "AccessGuard AI",
+    "analysis": "Interpretabilidad del modelo mediante SHAP",
+    "model": {
+        "name": "LogReg ElasticNet",
+        "type": "LogisticRegression ElasticNet",
+        "original_variables": [
+            "RESOURCE",
+            "MGR_ID",
+            "ROLE_ROLLUP_2",
+            "ROLE_DEPTNAME",
+            "ROLE_TITLE",
+            "ROLE_FAMILY_DESC"
+        ],
+        "transformed_variables": [
+            "freq__RESOURCE",
+            "freq__MGR_ID",
+            "freq__ROLE_ROLLUP_2",
+            "freq__ROLE_DEPTNAME",
+            "freq__ROLE_TITLE",
+            "freq__ROLE_FAMILY_DESC",
+            "freq__RESOURCE_x_MGR_ID",
+            "freq__ROLE_TITLE_x_ROLE_DEPTNAME",
+            "freq__RESOURCE_x_ROLE_TITLE",
+            "freq__RESOURCE_x_ROLE_DEPTNAME",
+            "freq__MGR_ID_x_ROLE_TITLE",
+            "nuniq__RESOURCE_por_MGR_ID",
+            "nuniq__RESOURCE_por_ROLE_DEPTNAME",
+            "nuniq__RESOURCE_por_ROLE_TITLE",
+            "nuniq__MGR_ID_por_RESOURCE",
+            "nuniq__ROLE_TITLE_por_RESOURCE",
+            "nuniq__ROLE_DEPTNAME_por_RESOURCE",
+            "share__RESOURCE_en_MGR",
+            "te__RESOURCE",
+            "te__MGR_ID",
+            "te__ROLE_ROLLUP_2",
+            "te__ROLE_DEPTNAME",
+            "te__ROLE_TITLE",
+            "te__ROLE_FAMILY_DESC",
+            "te__RESOURCE_x_MGR_ID",
+            "te__ROLE_TITLE_x_ROLE_DEPTNAME",
+            "te__RESOURCE_x_ROLE_TITLE",
+            "te__RESOURCE_x_ROLE_DEPTNAME",
+            "te__MGR_ID_x_ROLE_TITLE"
+        ]
+    },
+    "training_data": {
+        "requests": 26215,
+        "managers": 3360,
+        "approved": 24697,
+        "denied": 1518
+    },
+    "shap_analysis": {
+        "method": "LinearExplainer",
+        "masker": "Independent",
+        "background_samples": 200,
+        "explained_requests": 1500,
+        "number_of_variables": 29,
+        "output_scale": "Log-odds for ACTION=1 (approval)",
+        "feature_importance_method": "Mean absolute SHAP value",
+        "max_additivity_error": 1.7763568394002505e-15
+    },
+    "top_5_features": [
+        {
+            "variable": "freq__RESOURCE_x_ROLE_DEPTNAME",
+            "importancia_media_absoluta": 0.46716631952872467,
+            "contribucion_media": -0.048209298934007244,
+            "contribuciones_hacia_aprobacion_pct": 43.266666666666666,
+            "contribuciones_hacia_denegacion_pct": 56.733333333333334
+        },
+        {
+            "variable": "freq__RESOURCE_x_MGR_ID",
+            "importancia_media_absoluta": 0.24712327005787585,
+            "contribucion_media": 0.06487017856369731,
+            "contribuciones_hacia_aprobacion_pct": 28.999999999999996,
+            "contribuciones_hacia_denegacion_pct": 71.0
+        },
+        {
+            "variable": "freq__MGR_ID_x_ROLE_TITLE",
+            "importancia_media_absoluta": 0.16395731211070178,
+            "contribucion_media": -0.014067716902287022,
+            "contribuciones_hacia_aprobacion_pct": 44.0,
+            "contribuciones_hacia_denegacion_pct": 56.00000000000001
+        },
+        {
+            "variable": "freq__RESOURCE",
+            "importancia_media_absoluta": 0.15072816620312462,
+            "contribucion_media": 0.007681011579181399,
+            "contribuciones_hacia_aprobacion_pct": 58.4,
+            "contribuciones_hacia_denegacion_pct": 41.6
+        },
+        {
+            "variable": "te__RESOURCE",
+            "importancia_media_absoluta": 0.1399270645732761,
+            "contribucion_media": 0.004385196521353158,
+            "contribuciones_hacia_aprobacion_pct": 55.800000000000004,
+            "contribuciones_hacia_denegacion_pct": 44.2
+        }
+    ],
+    "decision_policy": {
+        "model": "LogReg ElasticNet",
+        "threshold_auto_approval": 0.9809057434648595,
+        "confidence_reference": 0.98,
+        "decision_1": "Autoaprobar si p_approve > threshold_auto_approval",
+        "decision_2": "Enviar a revisión humana si p_approve <= threshold_auto_approval",
+        "review_priority": "Orden ascendente de p_approve",
+        "automatic_denial": false,
+        "review_zones": {
+            "priority": "Primeras solicitudes de la cola según capacidad IAM",
+            "ordinary": "Solicitudes restantes de la cola manual"
+        },
+        "priority_cutoff_defined_in_model": false
+    },
+    "artifacts": {
+        "beeswarm": "reports/figures/shap_summary.png",
+        "importance_chart": "reports/figures/shap_importance.png",
+        "importance_csv": "reports/07_shap_importance.csv",
+        "calibration_curve": "reports/figures/calibration_curve_oof.png",
+        "calibration_table": "reports/07_calibration_bins.csv"
+    },
+    "limitations": [
+        "SHAP describes model contributions, not causal relationships.",
+        "Feature importance does not establish whether an access is safe or unsafe.",
+        "The analysis uses out-of-fold target encoding grouped by MGR_ID.",
+        "The holdout was not used for this SHAP analysis.",
+        "The priority and ordinary review zones are operational subdivisions, not separate model predictions.",
+        "The Independent masker treats transformed features independently; correlations between engineered features may affect interpretation."
+    ],
+    "validation_oof": {
+        "method": "StratifiedGroupKFold",
+        "folds": 5,
+        "group_column": "MGR_ID",
+        "seed": 42,
+        "requests": 26215,
+        "roc_auc": 0.7291183371714187
+    },
+    "calibration": {
+        "brier_score": 0.06079104328609507,
+        "brier_baseline": 0.054552699876958266,
+        "brier_skill_score": -0.11435443934410516,
+        "log_loss": 0.2375461083739626,
+        "ece": 0.08123141044643449,
+        "interpretation": "Las aprobaciones observadas fueron superiores a las probabilidades estimadas en los diez grupos analizados. El Brier Skill Score negativo indica que el modelo no superó la referencia basada en la tasa global de aprobación.",
+        "recommendation": "Evaluar técnicas de calibración en una etapa posterior, mediante validación independiente."
+    }
+}
