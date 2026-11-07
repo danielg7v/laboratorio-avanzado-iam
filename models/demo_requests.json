@@ -1,0 +1,26 @@
+{
+  "Ejemplo zona verde": {
+    "RESOURCE": 31232,
+    "MGR_ID": 17487,
+    "ROLE_ROLLUP_2": 117891,
+    "ROLE_DEPTNAME": 117878,
+    "ROLE_TITLE": 118568,
+    "ROLE_FAMILY_DESC": 292195
+  },
+  "Ejemplo zona amarilla": {
+    "RESOURCE": 5173,
+    "MGR_ID": 5242,
+    "ROLE_ROLLUP_2": 118052,
+    "ROLE_DEPTNAME": 120671,
+    "ROLE_TITLE": 120357,
+    "ROLE_FAMILY_DESC": 120065
+  },
+  "Ejemplo zona roja": {
+    "RESOURCE": 38082,
+    "MGR_ID": 17841,
+    "ROLE_ROLLUP_2": 118587,
+    "ROLE_DEPTNAME": 117941,
+    "ROLE_TITLE": 118568,
+    "ROLE_FAMILY_DESC": 135898
+  }
+}

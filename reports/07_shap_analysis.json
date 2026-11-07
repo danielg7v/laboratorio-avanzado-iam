@@ -1,0 +1,209 @@
+{
+  "generated_at": "2026-11-06T19:39:24",
+  "model": "LogReg ElasticNet",
+  "best_params": {
+    "C": 0.031692812003053746,
+    "l1_ratio": 0.3393069530481164
+  },
+  "method_note": "Tercera lectura de la reserva, solo informativa: umbrales fijados con OOF del entrenamiento.",
+  "thresholds": {
+    "t_auto_strict": 0.9809057434648595,
+    "t_low": 0.7449596245458132,
+    "red_fraction": 0.1,
+    "practical_confidence": 0.98
+  },
+  "oof_zones": [
+    {
+      "zona": "verde",
+      "decisión": "Auto-aprobación estricta",
+      "n": 893,
+      "% del total": 0.03406446690825863,
+      "accesos indebidos": 0,
+      "% indebidos en la zona": 0.0,
+      "lift vs base": 0.0
+    },
+    {
+      "zona": "amarillo",
+      "decisión": "Cola de triaje priorizada",
+      "n": 22700,
+      "% del total": 0.8659164600419607,
+      "accesos indebidos": 1023,
+      "% indebidos en la zona": 0.04506607929515419,
+      "lift vs base": 0.7782656579199387
+    },
+    {
+      "zona": "rojo",
+      "decisión": "Revisión manual",
+      "n": 2622,
+      "% del total": 0.10001907304978067,
+      "accesos indebidos": 495,
+      "% indebidos en la zona": 0.18878718535469108,
+      "lift vs base": 3.2602477365436275
+    }
+  ],
+  "holdout": {
+    "n": 6554,
+    "roc_auc": 0.7008785104632904,
+    "pr_auc_deny": 0.198654735707646,
+    "strict_fp": 2,
+    "strict_fpr": 0.005277044854881266,
+    "strict_fpr_upper95": 0.016517700423587158,
+    "practical_098": {
+      "confidence": 0.98,
+      "auto_approval_rate": 0.05721696673787,
+      "n_approved": 375,
+      "fp": 3,
+      "precision": 0.992,
+      "fpr": 0.0079155672823219,
+      "fpr_upper95": 0.020330214106313502
+    },
+    "queue_capture": {
+      "5%": 0.20844327176781002,
+      "10%": 0.30606860158311344,
+      "20%": 0.41688654353562005,
+      "50%": 0.7282321899736148,
+      "n_queue": 6213
+    },
+    "zones": [
+      {
+        "zona": "verde",
+        "decisión": "Auto-aprobación estricta",
+        "n": 341,
+        "% del total": 0.05202929508696979,
+        "accesos indebidos": 2,
+        "% indebidos en la zona": 0.005865102639296188,
+        "lift vs base": 0.10142449260672089
+      },
+      {
+        "zona": "amarillo",
+        "decisión": "Cola de triaje priorizada",
+        "n": 5546,
+        "% del total": 0.8462007934086054,
+        "accesos indebidos": 261,
+        "% indebidos en la zona": 0.04706094482509917,
+        "lift vs base": 0.8138190828065962
+      },
+      {
+        "zona": "rojo",
+        "decisión": "Revisión manual",
+        "n": 667,
+        "% del total": 0.10176991150442478,
+        "accesos indebidos": 116,
+        "% indebidos en la zona": 0.17391304347826086,
+        "lift vs base": 3.00745669381668
+      }
+    ]
+  },
+  "calibration": {
+    "OOF (entrenamiento)": {
+      "brier": 0.06079104328609505,
+      "ece": 0.08123141044643453
+    },
+    "Reserva": {
+      "brier": 0.06120177616679677,
+      "ece": 0.07863175120863156
+    }
+  },
+  "shap": {
+    "n_explained": 6554,
+    "explainer": "LinearExplainer",
+    "family_share": {
+      "target encoding": 0.19153433122381297,
+      "frecuencia": 0.742204567078094,
+      "nº de distintos": 0.05691844460191734,
+      "otras": 0.009342657096175655
+    },
+    "top_features": [
+      {
+        "feature": "freq__RESOURCE_x_MGR_ID",
+        "mean_abs_shap": 1.0624158705048958,
+        "mean_shap": -1.0624158705048958,
+        "share": 0.2622457878054023
+      },
+      {
+        "feature": "freq__RESOURCE_x_ROLE_DEPTNAME",
+        "mean_abs_shap": 0.761354568337959,
+        "mean_shap": -0.4229885210700978,
+        "share": 0.18793208395705152
+      },
+      {
+        "feature": "freq__MGR_ID_x_ROLE_TITLE",
+        "mean_abs_shap": 0.5811044911401001,
+        "mean_shap": 0.5811044911401001,
+        "share": 0.14343931534444326
+      },
+      {
+        "feature": "freq__RESOURCE",
+        "mean_abs_shap": 0.17705390425432013,
+        "mean_shap": 0.03497454198663437,
+        "share": 0.04370382812817976
+      },
+      {
+        "feature": "te__RESOURCE",
+        "mean_abs_shap": 0.159233371689042,
+        "mean_shap": -0.03669499223230098,
+        "share": 0.039305023732051664
+      },
+      {
+        "feature": "nuniq__ROLE_DEPTNAME_por_RESOURCE",
+        "mean_abs_shap": 0.131504171586475,
+        "mean_shap": -0.004488802066390767,
+        "share": 0.03246037266085157
+      },
+      {
+        "feature": "freq__ROLE_ROLLUP_2",
+        "mean_abs_shap": 0.12678228914629255,
+        "mean_shap": -0.02845643349545232,
+        "share": 0.0312948274023252
+      },
+      {
+        "feature": "freq__ROLE_TITLE_x_ROLE_DEPTNAME",
+        "mean_abs_shap": 0.12309894872049487,
+        "mean_shap": -0.06293267456245562,
+        "share": 0.03038563493020997
+      },
+      {
+        "feature": "te__ROLE_DEPTNAME",
+        "mean_abs_shap": 0.12221273804911147,
+        "mean_shap": -0.009228817158785416,
+        "share": 0.030166883476913205
+      },
+      {
+        "feature": "te__ROLE_ROLLUP_2",
+        "mean_abs_shap": 0.11940561610389701,
+        "mean_shap": -0.01775227383834741,
+        "share": 0.029473975994611802
+      },
+      {
+        "feature": "freq__ROLE_FAMILY_DESC",
+        "mean_abs_shap": 0.11303281944272534,
+        "mean_shap": 0.029332926274450367,
+        "share": 0.02790092053927643
+      },
+      {
+        "feature": "te__ROLE_TITLE",
+        "mean_abs_shap": 0.11108627037863028,
+        "mean_shap": -0.008712963691883938,
+        "share": 0.02742043610094356
+      },
+      {
+        "feature": "te__ROLE_FAMILY_DESC",
+        "mean_abs_shap": 0.09652159976247036,
+        "mean_shap": 0.0003799306034481619,
+        "share": 0.023825305770251222
+      },
+      {
+        "feature": "te__ROLE_TITLE_x_ROLE_DEPTNAME",
+        "mean_abs_shap": 0.06736777521936978,
+        "mean_shap": 0.0031515170061724635,
+        "share": 0.01662900167022634
+      },
+      {
+        "feature": "freq__ROLE_TITLE",
+        "mean_abs_shap": 0.061992481573126416,
+        "mean_shap": 0.01516963996878793,
+        "share": 0.015302168971205617
+      }
+    ]
+  }
+}

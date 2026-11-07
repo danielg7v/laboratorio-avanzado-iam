@@ -1,143 +1,150 @@
-"""App de tu proyecto: un formulario que se construye solo a partir de `models/input_schema.json`.
+"""AccessGuard AI — app de apoyo a la decisión sobre solicitudes de acceso IAM (Zero Trust / Menor Privilegio).
 
-- Carga `models/model.joblib` desde ESTE repositorio. NO consulta Databricks: no se ponen credenciales
-  en la nube, y la app no depende de la cuota de ninguna plataforma.
-- Valida las entradas: si un dato es imposible, explica qué corregir en vez de responder cualquier cosa.
+- Carga `models/model.joblib` de ESTE repositorio. NO consulta Databricks ni usa credenciales.
+- Recibe los códigos de la solicitud, asigna una zona (verde / amarillo / rojo) y explica la decisión con SHAP local.
+- Nunca auto-deniega: lo que no es verde lo revisa una persona del área IAM.
 
-Ejecutar en local (desde la raíz de tu repo):  streamlit run app/streamlit_app.py
-
-Para personalizarla (título, etiquetas, aviso de uso responsable) edita `models/input_schema.json`
-(claves `app_title`, `labels`, `responsible_use`) o este archivo. Pídele a Claude cambios pequeños,
-de uno en uno, y pruébalos con `streamlit run`.
+Ejecutar desde la raíz del repo:  streamlit run app/streamlit_app.py
 """
-import importlib
+import json
 import sys
 from pathlib import Path
 
+import joblib
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import streamlit as st
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+from accessguard.explain import (ZONE_GREEN, ZONE_LABELS, ZONE_RED, ZONE_YELLOW, assign_zone, describe_feature,  # noqa: E402
+                                 explain_request, make_explainer, unseen_codes)
+
 MODEL_PATH = ROOT / "models" / "model.joblib"
-SCHEMA_PATH = ROOT / "models" / "input_schema.json"
-UNKNOWN = "(no sé)"
+DEMO_PATH = ROOT / "models" / "demo_requests.json"
 
-# El paquete de src/ puede llamarse `proyecto` o el nombre que le hayas puesto: lo buscamos.
-SRC = ROOT / "src"
-sys.path.insert(0, str(SRC))
-PACKAGE = next((p.name for p in sorted(SRC.iterdir()) if p.is_dir() and (p / "__init__.py").exists()), "proyecto")
-predict_module = importlib.import_module(f"{PACKAGE}.inference.predict")
-schema_module = importlib.import_module(f"{PACKAGE}.inference.schema")
-
-DEFAULT_RESPONSIBLE_USE = (
-    "- Esta herramienta **apoya** una decisión; la decisión final es de una persona.\n"
-    "- Fue entrenada con los datos de este proyecto: no la uses fuera de ese contexto sin validarla de nuevo.\n"
-    "- Revisa los **límites del modelo** en `models/ficha_modelo.md` antes de usarla."
-)
+COLUMN_LABELS = {
+    "RESOURCE": "Recurso solicitado (RESOURCE)", "MGR_ID": "Gerente (MGR_ID)", "ROLE_ROLLUP_2": "Agrupación de rol 2 (ROLE_ROLLUP_2)",
+    "ROLE_DEPTNAME": "Departamento (ROLE_DEPTNAME)", "ROLE_TITLE": "Cargo (ROLE_TITLE)", "ROLE_FAMILY_DESC": "Descripción de familia de rol (ROLE_FAMILY_DESC)",
+}
+ZONE_STYLE = {
+    ZONE_GREEN: ("#1B7F3B", "#E6F4EA", "🟢 VERDE · Auto-aprobación estricta",
+                 "La probabilidad supera el umbral estricto (el de 0 accesos indebidos en validación cruzada). Se puede aprobar sin revisión, dejando registro de auditoría."),
+    ZONE_YELLOW: ("#8A6100", "#FFF4D6", "🟡 AMARILLO · Cola de triaje priorizada",
+                  "Caso ambiguo: va a un analista IAM. Cuanto más baja la probabilidad, antes debería revisarse."),
+    ZONE_RED: ("#A4262C", "#FDE7E9", "🔴 ROJO · Revisión manual",
+               "Entre las solicitudes más sospechosas. Revisión manual obligatoria. El sistema **no** deniega por sí solo."),
+}
 
 
 @st.cache_resource
-def get_model():
-    return predict_module.load_model(MODEL_PATH)
+def load_bundle():
+    return joblib.load(MODEL_PATH)
+
+
+@st.cache_resource
+def load_explainer():
+    b = load_bundle()
+    return make_explainer(b["pipeline"], b["shap_background"])
 
 
 @st.cache_data
-def get_schema() -> dict:
-    return schema_module.load_schema(SCHEMA_PATH)
+def load_demo() -> dict:
+    return json.loads(DEMO_PATH.read_text(encoding="utf-8")) if DEMO_PATH.exists() else {}
 
 
-def label(schema: dict, column: str) -> str:
-    return schema.get("labels", {}).get(column, column)
+def apply_demo():
+    demo = load_demo().get(st.session_state.get("demo_choice"))
+    if demo:
+        for col, v in demo.items():
+            st.session_state[f"in_{col}"] = int(v)
 
 
-def numeric_field(schema: dict, column: str, key: str):
-    """Un campo numérico con su rango y mediana, y una casilla 'no sé' que deja el dato vacío."""
-    low, high = schema.get("valid_range", {}).get(column) or schema["observed_range"][column]
-    default = float(schema["median"][column])
-    is_int = column in schema.get("integer_columns", [])
-    if high <= low:
-        high = low + 1
-    default = min(max(default, low), high)
-    unknown = st.checkbox(f"No sé: {label(schema, column)}", key=f"unk_{key}")
-    if unknown:
-        return np.nan
-    if is_int:
-        return st.number_input(label(schema, column), min_value=int(low), max_value=int(high), value=int(round(default)), step=1, key=key)
-    return st.number_input(label(schema, column), min_value=float(low), max_value=float(high), value=float(default), key=key)
-
-
-def build_form(schema: dict) -> dict:
-    """Dibuja el formulario (tres columnas) y devuelve una fila de entrada."""
-    row = {}
-    columns = schema["numeric"] + schema["categorical"]
-    cols = st.columns(3)
-    for i, column in enumerate(columns):
-        with cols[i % 3]:
-            if column in schema["categorical"]:
-                options = schema["categories"][column] + [UNKNOWN]
-                choice = st.selectbox(label(schema, column), options, key=f"cat_{column}")
-                row[column] = np.nan if choice == UNKNOWN else choice
-            else:
-                row[column] = numeric_field(schema, column, f"num_{column}")
-    return row
+def shap_chart(top: list):
+    names = [describe_feature(t["feature"]) for t in top][::-1]
+    vals = [t["shap"] for t in top][::-1]
+    fig, ax = plt.subplots(figsize=(7, 0.45 * len(vals) + 0.8))
+    ax.barh(names, vals, color=["#1B7F3B" if v > 0 else "#A4262C" for v in vals])
+    ax.axvline(0, color="#444", lw=0.8)
+    ax.set_xlabel("Efecto sobre la decisión (log-odds): verde empuja a aprobar · rojo empuja a revisar")
+    ax.tick_params(labelsize=8)
+    plt.tight_layout()
+    return fig
 
 
 def main() -> None:
-    st.set_page_config(page_title="Mi proyecto", page_icon="🧭", layout="wide")
+    st.set_page_config(page_title="AccessGuard AI", page_icon="🛡️", layout="wide")
+    st.title("🛡️ AccessGuard AI — Triaje de solicitudes de acceso")
+    st.caption("Herramienta de apoyo bajo Zero Trust / Menor Privilegio. **No decide por sí sola:** ante la duda, escala a un analista IAM.")
 
-    if not MODEL_PATH.exists() or not SCHEMA_PATH.exists():
-        st.title("Mi proyecto")
-        st.error(
-            "Falta `models/model.joblib` o `models/input_schema.json`. "
-            "Ejecuta el notebook `notebooks/09_inferencia.ipynb` para generarlos."
-        )
+    if not MODEL_PATH.exists():
+        st.error("Falta `models/model.joblib`. Ejecuta los notebooks 06 y 07 para generarlo.")
         st.stop()
+    bundle, explainer = load_bundle(), load_explainer()
+    pipe, t_auto, t_low = bundle["pipeline"], bundle["t_auto_strict"], bundle["t_low"]
+    cols = list(bundle["input_columns"])
 
-    model, schema = get_model(), get_schema()
-    st.title(schema.get("app_title", "Mi proyecto"))
-    st.caption("Herramienta de apoyo a la decisión. **No decide por sí sola.**")
+    with st.sidebar:
+        st.header("Política de zonas")
+        st.markdown(f"- 🟢 **Verde:** p > {t_auto:.3f}\n- 🟡 **Amarillo:** {t_low:.3f} ≤ p ≤ {t_auto:.3f}\n- 🔴 **Rojo:** p < {t_low:.3f}")
+        st.caption(f"Modelo: {bundle['model_name']} · congelado {bundle.get('frozen_at', '—')}. p = probabilidad de que la solicitud sea aprobada.")
+        hm = bundle.get("holdout_metrics", {})
+        if hm:
+            st.caption(f"ROC-AUC en gerentes no vistos: {hm['roc_auc']:.2f}. El modelo ordena **moderadamente**: no es un oráculo.")
 
-    with st.form("entrada"):
-        row = build_form(schema)
-        submitted = st.form_submit_button("Evaluar", type="primary")
+    demo = load_demo()
+    if demo:
+        st.selectbox("Cargar un ejemplo de demostración (opcional)", list(demo), index=None, key="demo_choice", on_change=apply_demo,
+                     placeholder="Escribe los códigos a mano o elige un ejemplo")
 
-    if not submitted:
-        st.info("Completa los datos y pulsa **Evaluar**. Marca *No sé* en lo que no conozcas.")
+    with st.form("solicitud"):
+        st.subheader("Atributos de la solicitud")
+        grid = st.columns(3)
+        row = {}
+        for i, c in enumerate(cols):
+            with grid[i % 3]:
+                row[c] = st.number_input(COLUMN_LABELS.get(c, c), min_value=0, step=1, key=f"in_{c}", help="Código numérico anónimo del dataset (no es una cantidad).")
+        go = st.form_submit_button("Evaluar solicitud", type="primary")
+
+    if not go:
+        st.info("Completa los códigos y pulsa **Evaluar solicitud**.")
         return
 
-    try:
-        result = predict_module.predict_with_scores(pd.DataFrame([row]), model, schema)
-    except predict_module.InputValidationError as error:
-        st.error(f"Revisa los datos: {error}")
-        return
+    X = pd.DataFrame([row], columns=cols).astype("int64")
+    exp = explain_request(pipe, explainer, X, top=8)
+    p = exp["p_approve"]
+    zone = str(assign_zone([p], t_low, t_auto)[0])
+    fg, bg, title, text = ZONE_STYLE[zone]
 
-    first = result.iloc[0]
-    class_names = schema["class_names"]
-    left, right = st.columns(2)
-    with left:
-        st.metric("Resultado sugerido", str(first["decision"]))
-        detail = f"Clase más probable: **{first['most_likely']}**"
-        if "expected_cost" in result.columns:
-            detail += f" · costo esperado de esta decisión: **{first['expected_cost']:.2f}**"
-        st.caption(detail)
-        if bool(first["needs_review"]):
-            st.warning("**Revisión recomendada:** el modelo duda, o la decisión de menor costo difiere de la clase más probable.")
-        else:
-            st.success("El modelo está seguro de este resultado.")
-        for message in result.attrs.get("warnings", []):
-            st.warning(message)
-    with right:
-        st.write("**Probabilidad por clase**")
-        st.bar_chart(pd.DataFrame({"probabilidad": [first[f"proba_{c}"] for c in class_names]}, index=class_names))
+    st.markdown(f"<div style='background:{bg};border-left:8px solid {fg};padding:1rem 1.2rem;border-radius:6px'>"
+                f"<div style='color:{fg};font-size:1.4rem;font-weight:700'>{title}</div></div>", unsafe_allow_html=True)
+    st.markdown(text)
 
-    if "cost_matrix" in schema:
-        with st.expander("¿Cómo se decide? (matriz de costos)"):
-            st.markdown("La decisión es la de **menor costo esperado**, no necesariamente la más probable.")
-            st.dataframe(pd.DataFrame(schema["cost_matrix"], index=[f"real {c}" for c in class_names], columns=[f"decide {c}" for c in class_names]))
+    c1, c2, c3 = st.columns(3)
+    c1.metric("p(aprobar)", f"{p:.1%}")
+    c2.metric("Zona", ZONE_LABELS[zone])
+    c3.metric("Umbral verde", f"{t_auto:.1%}", delta=f"{(p - t_auto) * 100:+.1f} pts", delta_color="off")
+    st.progress(float(np.clip(p, 0, 1)), text=f"Posición de la solicitud (rojo < {t_low:.2f} ≤ amarillo ≤ {t_auto:.2f} < verde)")
+
+    unseen = unseen_codes(pipe, X)
+    if unseen:
+        st.warning("Códigos **nunca vistos** en el entrenamiento: " + ", ".join(unseen) + ". El modelo no tiene historial de ellos; trata el resultado con más cautela.")
+
+    st.subheader("¿Por qué? Explicación SHAP de esta solicitud")
+    st.pyplot(shap_chart(exp["top"]))
+    st.caption("Barras verdes empujan hacia aprobar; rojas, hacia revisar. Las variables resumen el **historial** (frecuencias y tasas de aprobación de los códigos), "
+               "no el mérito de la persona. Probabilidad base del modelo: "
+               f"{1 / (1 + np.exp(-exp['base_value'])):.1%}.")
+    with st.expander("Detalle numérico"):
+        st.dataframe(pd.DataFrame(exp["top"]).rename(columns={"feature": "variable", "shap": "SHAP", "value": "valor"}), hide_index=True)
     with st.expander("Uso responsable"):
-        st.markdown(schema.get("responsible_use", DEFAULT_RESPONSIBLE_USE))
+        st.markdown("- Apoya, no reemplaza, la decisión de un analista IAM; nunca auto-deniega.\n"
+                    "- Entrenado con el dataset Amazon Employee Access (códigos anónimos): no usar con otros datos sin revalidar.\n"
+                    "- 0 accesos indebidos observados no prueba FPR = 0 %: en la reserva la zona verde dejó pasar "
+                    f"{bundle.get('holdout_metrics', {}).get('strict_fp', '—')} accesos indebidos.\n"
+                    "- Faltan datos de criticidad del recurso y de tiempos de espera reales (SLA).")
 
 
-if __name__ == "__main__":  # `streamlit run` ejecuta el archivo como programa principal
+if __name__ == "__main__":
     main()
