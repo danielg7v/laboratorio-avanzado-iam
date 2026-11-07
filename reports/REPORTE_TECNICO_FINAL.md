@@ -6,8 +6,8 @@ Memoria técnica del proyecto de gobierno de accesos (IAM) bajo el marco Zero Tr
 
 - **Problema.** El equipo IAM decide si aprueba o deniega solicitudes de acceso a recursos corporativos. Se busca **auto-aprobar con seguridad lo rutinario** y canalizar a un analista lo ambiguo o sospechoso.
 - **Solución.** Un modelo que estima la probabilidad de aprobar y asigna cada solicitud a una de tres zonas: **verde** (auto-aprobación estricta), **amarilla** (cola de triaje priorizada) y **roja** (revisión manual). El sistema **nunca deniega por sí solo**.
-- **Resultado honesto.** La señal del dataset es moderada (ROC-AUC ≈ 0,70 en gerentes no vistos). El modelo auto-aprueba una fracción pequeña (≈ 5 % en la reserva) y su zona roja concentra unas 3 veces más denegaciones que el promedio. El umbral estricto que en validación cruzada tenía cero accesos indebidos dejó pasar **2 de 341** en la reserva: la cifra "0 errores" no es una garantía.
-- **Valor real.** Ordenar la cola: revisando solo el 10 % más sospechoso de lo no auto-aprobado se encuentra el 31 % de las denegaciones (el azar daría 10 %).
+- **Resultado honesto.** La señal del dataset es moderada (ROC-AUC = 0,7009 en gerentes no vistos). El modelo auto-aprueba una fracción pequeña (cobertura estricta de 5,20 % en la reserva) y su zona roja concentra unas 3 veces más denegaciones que el promedio. El umbral estricto que en validación cruzada tenía cero accesos indebidos dejó pasar **2 de 341** en la reserva: la cifra "0 errores" no es una garantía.
+- **Valor real.** Ordenar la cola: revisando solo el 10 % más sospechoso de lo no auto-aprobado se encuentra el 30,61 % de las denegaciones (el azar daría 10 %).
 
 ## 2. Caso de negocio
 
@@ -71,13 +71,13 @@ Las zonas se fijan **solo con predicciones fuera de pliegue del entrenamiento**:
 
 | Zona | Solicitudes | % del total | Accesos indebidos | % indebidos en la zona | Frente al promedio |
 |---|---|---|---|---|---|
-| Verde | 341 | 5,2 % | 2 | 0,6 % | 0,10 × |
+| Verde | 341 | 5,20 % | 2 | 0,6 % | 0,10 × |
 | Amarilla | 5.546 | 84,6 % | 261 | 4,7 % | 0,81 × |
 | Roja | 667 | 10,2 % | 116 | 17,4 % | 3,0 × |
 
-- ROC-AUC 0,701 y PR-AUC de *denegar* 0,199 (el azar daría 0,058).
+- ROC-AUC 0,7009 y PR-AUC de *denegar* 0,199 (el azar daría 0,058).
 - Zona verde: 2 accesos indebidos sobre 341; la tasa real de falsos positivos podría ser de hasta 1,65 % (95 % de confianza). Que la validación cruzada mostrara cero **no** probó que la tasa real fuera cero.
-- Captura en la cola: revisando el primer 5 %, 10 % y 20 % de lo no auto-aprobado se encuentra el 21 %, 31 % y 42 % de las denegaciones.
+- Captura en la cola: revisando el primer 5 %, 10 % y 20 % de lo no auto-aprobado se encuentra el 20,84 %, 30,61 % y 41,69 % de las denegaciones.
 - **Limitación importante:** la zona amarilla, que es la más grande, tiene menos denegaciones que el promedio; el valor está en los extremos (verde segura y roja sospechosa), no en separar el centro.
 
 **Advertencia de método.** La reserva se abrió tres veces (enfoque monetario, enfoque Zero Trust y este análisis). Las dos últimas fueron de solo lectura y los umbrales no se tocaron tras verla. Aun así, está "gastada": la verdadera prueba de producción debe hacerse con datos nuevos etiquetados.

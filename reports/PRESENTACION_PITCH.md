@@ -41,10 +41,10 @@
 **Mensaje clave:** El valor está en los extremos y en ordenar la cola, no en automatizar mucho.
 
 - Evaluado en 883 gerentes que el modelo nunca vio (6.554 solicitudes).
-- **Zona verde:** 5,2 % de las solicitudes; 2 accesos indebidos de 341 (la tasa real podría llegar a 1,65 %).
+- **Zona verde:** 5,20 % de las solicitudes; 2 accesos indebidos de 341 (la tasa real podría llegar a 1,65 %).
 - **Zona roja:** 10 % de las solicitudes con 3 veces más denegaciones que el promedio (17 % frente a 5,8 %).
-- **Cola ordenada:** revisando el 10 % más sospechoso se halla el 31 % de las denegaciones (azar: 10 %).
-- ROC-AUC 0,70. Si se hubiera partido por fila habría parecido 0,82: una ilusión que evitamos.
+- **Cola ordenada:** revisando el 10 % más sospechoso se halla el 30,61 % de las denegaciones (azar: 10 %).
+- ROC-AUC 0,7009. Si se hubiera partido por fila habría parecido 0,82: una ilusión que evitamos.
 
 **Visual:** tabla de zonas y curva de captura frente al azar.
 **Guion (45 s):** "Somos transparentes: automatiza poco, pero prioriza bien, y no prometemos cero errores."
